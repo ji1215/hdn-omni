@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #3b82f6;
+    --secondary: #60a5fa;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --background: #f5f5f7;
+    --foreground: #1f2937;
+    --sidebar-bg: #2c3e50;
+    --sidebar-hover: #34495e;
+    --header-bg: #ffffff;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --panel-bg: #fafafa;
+  }
+
+  .dark {
+    --background: #111827;
+    --foreground: #f9fafb;
+    --sidebar-bg: #1f2937;
+    --sidebar-hover: #374151;
+    --header-bg: #1f2937;
+    --card-bg: #1f2937;
+    --border: #374151;
+    --panel-bg: #111827;
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)];
+    font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-teal-600 px-4 py-2 rounded-lg transition-colors shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-cyan-700 px-4 py-2 rounded-lg transition-colors shadow-sm;
+  }
+
+  .btn-success {
+    @apply bg-success text-white hover:bg-green-600 px-4 py-2 rounded-lg transition-colors shadow-sm;
+  }
+
+  .btn-error {
+    @apply bg-error text-white hover:bg-red-600 px-4 py-2 rounded-lg transition-colors shadow-sm;
+  }
+
+  .card {
+    @apply bg-[var(--card-bg)] rounded-lg shadow-sm border border-[var(--border)] p-6 transition-colors;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-[var(--card-bg)] text-[var(--foreground)] transition-colors;
+  }
+}
+
+@layer utilities {
+  /* 반응형 이미지 기본 스타일 */
+  img {
+    @apply max-w-full h-auto;
+  }
+
+  /* 반응형 이미지 컨테이너 */
+  .responsive-img-container {
+    @apply relative w-full overflow-hidden;
+  }
+
+  .responsive-img-container img {
+    @apply w-full h-full object-cover;
+  }
+
+  /* 이미지 종횡비 유지 */
+  .aspect-video {
+    @apply aspect-[16/9];
+  }
+
+  .aspect-square {
+    @apply aspect-[1/1];
+  }
+
+  .aspect-portrait {
+    @apply aspect-[3/4];
+  }
+}
