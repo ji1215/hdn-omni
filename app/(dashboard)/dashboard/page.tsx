@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { DashboardSkeleton } from '@/components/dashboard/CardSkeleton';
@@ -8,40 +8,50 @@ import { DashboardControls } from '@/components/dashboard/DashboardControls';
 import { AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
-  const {
-    metrics,
-    timeRange,
-    isLoading,
-    error,
-    lastUpdated,
-    setTimeRange,
-    refreshMetrics,
-  } = useDashboardStore();
+  const { metrics, timeRange, isLoading, error, lastUpdated, setTimeRange, refreshMetrics } =
+    useDashboardStore();
+
+  // 자동 새로고침 상태 관리
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(5);
+
+  // 자동 새로고침 토글 핸들러
+  const handleAutoRefreshChange = useCallback((enabled: boolean) => {
+    setAutoRefresh(enabled);
+  }, []);
+
+  // 새로고침 간격 변경 핸들러
+  const handleRefreshIntervalChange = useCallback((interval: number) => {
+    setRefreshInterval(interval);
+  }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     refreshMetrics();
   }, [refreshMetrics]);
 
-  // 5초마다 자동 새로고침
+  // 자동 새로고침 (설정된 간격으로)
   useEffect(() => {
+    if (!autoRefresh) return;
+
     const interval = setInterval(() => {
       refreshMetrics();
-    }, 5000); // 5초 간격
+    }, refreshInterval * 1000);
 
     return () => clearInterval(interval);
-  }, [refreshMetrics]);
+  }, [autoRefresh, refreshInterval, refreshMetrics]);
 
   return (
-    <div className="p-6">
+    <div className="p-6 md:p-8">
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          대시보드
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          네트워크 상태 및 주요 지표를 실시간으로 확인하세요
-        </p>
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-2xl">☀️</span>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+            임시 대시보드
+          </h1>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">test</p>
       </div>
 
       {/* 대시보드 컨트롤 */}
@@ -51,6 +61,10 @@ export default function DashboardPage() {
         onRefresh={refreshMetrics}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={handleAutoRefreshChange}
+        refreshInterval={refreshInterval}
+        onRefreshIntervalChange={handleRefreshIntervalChange}
       />
 
       {/* 에러 상태 */}
@@ -62,9 +76,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">
-              {error}
-            </p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
           </div>
         </div>
       )}
@@ -89,25 +101,19 @@ export default function DashboardPage() {
 
       {/* 임시 콘텐츠 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
+        <div className="card rounded-2xl border-0">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             네트워크 토폴로지
           </h2>
-          <div className="bg-gray-100 dark:bg-gray-700 rounded h-64 flex items-center justify-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              토폴로지 맵이 여기에 표시됩니다
-            </p>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-xl h-64 flex items-center justify-center">
+            <p className="text-gray-500 dark:text-gray-400">토폴로지 맵이 여기에 표시됩니다</p>
           </div>
         </div>
 
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            트래픽 차트
-          </h2>
-          <div className="bg-gray-100 dark:bg-gray-700 rounded h-64 flex items-center justify-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              트래픽 차트가 여기에 표시됩니다
-            </p>
+        <div className="card rounded-2xl border-0">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">트래픽 차트</h2>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-xl h-64 flex items-center justify-center">
+            <p className="text-gray-500 dark:text-gray-400">트래픽 차트가 여기에 표시됩니다</p>
           </div>
         </div>
       </div>

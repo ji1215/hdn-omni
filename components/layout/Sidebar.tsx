@@ -27,6 +27,8 @@ import {
   GitBranch,
   AlertTriangle,
   TrendingUp,
+  Search,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useStore from '@/store/useStore';
@@ -191,7 +193,7 @@ export default function Sidebar() {
       {/* 사이드바 */}
       <div
         className={cn(
-          'bg-sidebar-bg dark:bg-sidebar-bg border-r border-gray-700 dark:border-gray-800 h-full flex flex-col transition-all duration-300',
+          'bg-sidebar-bg border-r border-sidebar-hover h-full flex flex-col transition-all duration-300 shadow-lg',
           // 데스크톱 스타일
           'md:relative md:translate-x-0',
           sidebarCollapsed ? 'md:w-20' : 'md:w-64',
@@ -204,16 +206,16 @@ export default function Sidebar() {
         {/* Logo and Toggle */}
         <div
           className={cn(
-            'flex items-center h-16 px-4 border-b border-gray-700 dark:border-gray-800',
+            'flex items-center h-16 px-4 border-b border-sidebar-hover',
             sidebarCollapsed ? 'justify-center' : 'justify-between'
           )}
         >
           <div className={cn('flex items-center gap-2', sidebarCollapsed && 'justify-center')}>
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md">
               <Shield className="w-5 h-5 text-white" />
             </div>
             {!sidebarCollapsed && (
-              <span className="text-white font-semibold text-lg">HDN Omni</span>
+              <span className="text-white font-bold text-lg tracking-wide">hdn-omni</span>
             )}
           </div>
           {/* 데스크톱에서만 토글 버튼 표시 - 펼쳐진 상태일 때만 */}
@@ -248,7 +250,7 @@ export default function Sidebar() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto sidebar-scrollbar">
           {navigation.map((item) => {
             const isActive = isItemActive(item);
             const isExpanded = expandedItems.includes(item.name);
@@ -292,8 +294,8 @@ export default function Sidebar() {
                       sidebarCollapsed && 'justify-center',
                       hasChildren && !sidebarCollapsed && 'pr-10', // Add padding for expand button
                       isActive
-                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                        : 'text-gray-300 hover:bg-sidebar-hover hover:text-white'
+                        ? 'bg-primary text-white font-medium shadow-md'
+                        : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
                     )}
                     title={sidebarCollapsed ? item.name : undefined}
                   >
@@ -349,7 +351,7 @@ export default function Sidebar() {
                           className={cn(
                             'flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm',
                             isChildActive
-                              ? 'bg-primary/80 text-white'
+                              ? 'bg-primary/20 text-white font-medium'
                               : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
                           )}
                         >
@@ -366,12 +368,14 @@ export default function Sidebar() {
         </nav>
 
         {/* Help Button */}
-        <div className="p-3 border-t border-gray-700 dark:border-gray-800">
-          <Button
-            variant="ghost"
+        <div className="p-3 border-t border-sidebar-hover">
+          <Link
+            href="/help"
+            onClick={handleLinkClick}
             className={cn(
-              'w-full justify-start gap-3 px-3 py-2.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors group relative',
-              sidebarCollapsed && 'md:justify-center'
+              'flex items-center w-full gap-3 px-3 py-2.5 rounded-lg bg-sidebar-hover text-gray-400 hover:text-white hover:bg-sidebar-active transition-colors group relative',
+              sidebarCollapsed && 'md:justify-center',
+              pathname === '/help' && 'bg-primary text-white'
             )}
           >
             <HelpCircle className="w-5 h-5 flex-shrink-0" />
@@ -383,14 +387,14 @@ export default function Sidebar() {
                 도움말
               </div>
             )}
-          </Button>
+          </Link>
         </div>
       </div>
 
       {/* Fixed position dropdown for collapsed sidebar */}
       {sidebarCollapsed && hoveredItem && dropdownPosition && (
         <div
-          className="fixed px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[9999] shadow-xl border border-gray-700"
+          className="fixed px-3 py-1.5 bg-sidebar-bg text-white text-sm rounded-lg whitespace-nowrap z-[9999] shadow-xl border border-sidebar-hover"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left + 8}px`,
@@ -413,7 +417,7 @@ export default function Sidebar() {
             const item = navigation.find((i) => i.name === hoveredItem);
             if (item?.children) {
               return (
-                <div className="mt-2 space-y-1 border-t border-gray-700 pt-2">
+                <div className="mt-2 space-y-1 border-t border-sidebar-hover pt-2">
                   {item.children.map((child) => {
                     const isExactMatch = pathname === child.href;
                     const isSubRoute =
@@ -433,7 +437,7 @@ export default function Sidebar() {
                           'flex items-center gap-2 px-2 py-1.5 text-xs rounded transition-colors',
                           isChildActive
                             ? 'bg-primary text-white'
-                            : 'hover:bg-gray-800 text-gray-300 hover:text-white'
+                            : 'hover:bg-sidebar-hover text-gray-400 hover:text-white'
                         )}
                       >
                         <child.icon className="w-3 h-3 flex-shrink-0" />

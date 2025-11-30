@@ -297,6 +297,14 @@ const layoutOptions: TopologyLayoutType[] = [
   { name: 'breadthfirst', label: '너비 우선' },
 ];
 
+// 새로고침 간격 옵션
+const refreshIntervalOptions: { value: number; label: string }[] = [
+  { value: 5, label: '5초' },
+  { value: 10, label: '10초' },
+  { value: 30, label: '30초' },
+  { value: 60, label: '1분' },
+];
+
 interface NetworkTopologyProps {
   data?: TopologyData;
   className?: string;
@@ -594,6 +602,16 @@ export function NetworkTopology({
     setViewOptions(prev => ({ ...prev, viewMode: mode }));
   }, []);
 
+  // 자동 새로고침 토글
+  const handleAutoRefreshToggle = useCallback(() => {
+    setViewOptions(prev => ({ ...prev, autoRefresh: !prev.autoRefresh }));
+  }, []);
+
+  // 새로고침 간격 변경
+  const handleRefreshIntervalChange = useCallback((interval: number) => {
+    setViewOptions(prev => ({ ...prev, refreshInterval: interval }));
+  }, []);
+
   // Refs 업데이트
   useEffect(() => {
     onNodeClickRef.current = onNodeClick;
@@ -791,8 +809,38 @@ export function NetworkTopology({
             </Button>
           </div>
 
-          {/* 오른쪽: 상태 정보 */}
+          {/* 오른쪽: 자동 새로고침 및 상태 정보 */}
           <div className="flex items-center gap-6 text-sm">
+            {/* 자동 새로고침 체크박스 및 간격 설정 */}
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={viewOptions.autoRefresh}
+                  onChange={handleAutoRefreshToggle}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+                  aria-label="자동 새로고침 활성화"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  자동 새로고침
+                </span>
+              </label>
+              <select
+                value={viewOptions.refreshInterval}
+                onChange={(e) => handleRefreshIntervalChange(Number(e.target.value))}
+                disabled={!viewOptions.autoRefresh}
+                className="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="새로고침 간격"
+              >
+                {refreshIntervalOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 상태 정보 */}
             <div className="flex items-center gap-2">
               <span className="text-gray-500 dark:text-gray-400">노드:</span>
               <span className="text-gray-900 dark:text-white font-medium">{data?.nodes.length || 0}</span>

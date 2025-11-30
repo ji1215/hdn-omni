@@ -12,14 +12,14 @@ export default function DashboardLayout({
   const { setMobileDrawerOpen } = useStore();
 
   return (
-    <div className="h-screen flex overflow-hidden bg-bg-main dark:bg-background transition-colors">
+    <div className="h-screen flex overflow-hidden bg-bg-main dark:bg-gray-900 transition-colors">
       {/* Sidebar - manages its own mobile drawer and backdrop */}
       <Sidebar />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onMenuClick={() => setMobileDrawerOpen(true)} />
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-colors">
+        <main className="flex-1 overflow-auto bg-bg-main dark:bg-gray-900 transition-colors">
           {children}
         </main>
       </div>

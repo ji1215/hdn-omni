@@ -72,16 +72,16 @@ export function KPICard({ data, className = '' }: KPICardProps) {
 
   return (
     <div
-      className={`card p-6 hover:shadow-lg transition-shadow duration-200 ${className}`}
+      className={`card p-6 rounded-2xl hover:shadow-xl transition-all duration-200 border-0 ${className}`}
       role="article"
       aria-label={`${data.title} KPI 카드`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
             {data.title}
           </p>
-          <div className="flex items-baseline space-x-2">
+          <div className="flex items-baseline space-x-2 mb-3">
             <p
               className="text-3xl font-bold text-gray-900 dark:text-white"
               aria-label={`현재 값: ${data.value}${data.unit || ''}`}
@@ -89,7 +89,7 @@ export function KPICard({ data, className = '' }: KPICardProps) {
               {data.value}
             </p>
             {data.unit && (
-              <span className="text-lg text-gray-600 dark:text-gray-400">
+              <span className="text-base text-gray-500 dark:text-gray-400">
                 {data.unit}
               </span>
             )}
@@ -97,19 +97,19 @@ export function KPICard({ data, className = '' }: KPICardProps) {
 
           {/* 트렌드 및 변화율 표시 */}
           {data.change !== undefined && (
-            <div className="mt-3 flex items-center space-x-1">
+            <div className="flex items-center space-x-1">
               <TrendIcon
-                className={`h-4 w-4 ${trendColorMap[trend]}`}
+                className={`h-3.5 w-3.5 ${trendColorMap[trend]}`}
                 aria-hidden="true"
               />
               <span
-                className={`text-sm font-medium ${trendColorMap[trend]}`}
+                className={`text-xs font-semibold ${trendColorMap[trend]}`}
                 aria-label={`변화율: ${trend === 'up' ? '증가' : trend === 'down' ? '감소' : '변화 없음'} ${formatChange(data.change)}%`}
               >
                 {formatChange(data.change)}%
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                vs 이전
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                This month
               </span>
             </div>
           )}
@@ -117,7 +117,7 @@ export function KPICard({ data, className = '' }: KPICardProps) {
 
         {/* 아이콘 및 상태 표시 */}
         <div
-          className={`p-3 rounded-lg ${colors.bg}`}
+          className={`p-3 rounded-xl ${colors.bg}`}
           aria-label={`상태: ${status === 'success' ? '정상' : status === 'warning' ? '주의' : '위험'}`}
         >
           <Icon
@@ -129,7 +129,7 @@ export function KPICard({ data, className = '' }: KPICardProps) {
 
       {/* 상태 표시 인디케이터 */}
       {status !== 'success' && (
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
           <div className={`flex items-center space-x-2 ${colors.text}`}>
             <div className={`h-2 w-2 rounded-full ${status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'} animate-pulse`} />
             <span className="text-xs font-medium">

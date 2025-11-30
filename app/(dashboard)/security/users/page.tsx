@@ -24,9 +24,9 @@ import {
   useBulkDeleteUsers,
 } from '@/hooks/useUsers';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Plus, Users, Shield, UserX, Loader2 } from 'lucide-react';
+import { Plus, Users, Shield, UserX, Loader2, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/common';
+import { Button, StatCard } from '@/components/common';
 
 /**
  * 사용자 관리 페이지
@@ -172,74 +172,107 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* 페이지 헤더 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">사용자 관리</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            시스템 사용자 계정을 관리하고 권한을 설정합니다.
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Member Database</h1>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Last updated : 1 hour ago
           </p>
         </div>
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          variant="primary"
-          size="md"
-          leftIcon={<Plus className="w-5 h-5" />}
-        >
-          사용자 추가
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            variant="secondary"
+            size="md"
+            className="text-sm"
+          >
+            December 2023
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            className="text-sm"
+          >
+            Filter
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            className="text-sm"
+          >
+            Sort
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            className="text-sm"
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            className="text-sm"
+          >
+            View Setting
+          </Button>
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            className="text-sm"
+          >
+            Add Table
+          </Button>
+        </div>
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">전체 사용자</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-            </div>
-            <Users className="w-8 h-8 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">활성 사용자</p>
-              <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">
-                {stats.active}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-green-600 dark:bg-green-400 rounded-full" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">관리자</p>
-              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.admin}
-              </p>
-            </div>
-            <Shield className="w-8 h-8 text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">비활성</p>
-              <p className="mt-1 text-2xl font-bold text-gray-600 dark:text-gray-400">
-                {stats.inactive}
-              </p>
-            </div>
-            <UserX className="w-8 h-8 text-gray-400" />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          title="Salary Rate"
+          subtitle="Member Average"
+          value={`${((stats.active / stats.total) * 100 || 0).toFixed(1)}%`}
+          trend={{
+            value: '+10%',
+            direction: 'up',
+          }}
+          icon={MoreVertical}
+        />
+        <StatCard
+          title="Active Rate"
+          subtitle="Member Average"
+          value={`${((stats.active / stats.total) * 100 || 0).toFixed(1)}%`}
+          trend={{
+            value: '0.0%',
+            direction: 'neutral',
+          }}
+          icon={MoreVertical}
+        />
+        <StatCard
+          title="Hours Rate"
+          subtitle="Member Average"
+          value={`${((stats.admin / stats.total) * 100 || 0).toFixed(1)}%`}
+          trend={{
+            value: '-2.0%',
+            direction: 'down',
+          }}
+          icon={MoreVertical}
+        />
+        <StatCard
+          title="Work Rate"
+          subtitle="Member Average"
+          value={`${((stats.inactive / stats.total) * 100 || 0).toFixed(1)}%`}
+          trend={{
+            value: '0.0%',
+            direction: 'neutral',
+          }}
+          icon={MoreVertical}
+        />
       </div>
 
       {/* 필터 섹션 */}

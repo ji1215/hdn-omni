@@ -54,10 +54,10 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors">
+    <header className="h-16 bg-white dark:bg-gray-800 border-b border-border-color dark:border-gray-700 transition-colors shadow-sm">
       <div className="h-full px-6 flex items-center justify-between gap-4">
-        {/* 왼쪽: 검색바 */}
-        <div className="flex items-center gap-4 flex-1 max-w-2xl">
+        {/* 왼쪽: 메뉴 버튼 + 검색바 */}
+        <div className="flex items-center gap-3 flex-1 max-w-xl">
           <Button
             variant="icon"
             onClick={() => {
@@ -74,112 +74,68 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search Database"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 border border-border-color dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:text-gray-200 transition-colors"
+              className="w-full pl-9 pr-10 py-2 border border-border-color dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/20 focus:border-primary dark:focus:border-primary focus:bg-white dark:focus:bg-gray-700 dark:text-gray-200 transition-all placeholder-gray-400"
             />
             {searchQuery && (
               <Button
                 variant="icon"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X className="w-4 h-4" />
               </Button>
             )}
           </div>
-
-          <Button
-            variant="icon"
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          >
-            <User className="w-4 h-4" />
-            <ChevronDown className="w-3 h-3 -ml-1" />
-          </Button>
-
-          <Button
-            variant="primary"
-            leftIcon={<Plus className="w-4 h-4" />}
-            className="shadow-sm"
-          >
-            Add
-          </Button>
-
-          <Button
-            variant="secondary"
-            leftIcon={<Printer className="w-4 h-4" />}
-          >
-            Print
-          </Button>
         </div>
 
         {/* 오른쪽: 액션 버튼들 */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* 아이콘 버튼들 */}
           <Button
             variant="icon"
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hidden lg:flex p-2"
           >
-            <Calendar className="w-5 h-5" />
+            <HelpCircle className="w-4 h-4" />
           </Button>
 
           <Button
             variant="icon"
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hidden lg:flex p-2 relative"
           >
-            <User className="w-5 h-5" />
-          </Button>
-
-          <Button
-            variant="icon"
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </Button>
-
-          {/* Support */}
-          <Button
-            variant="ghost"
-            className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          >
-            Support
-          </Button>
-
-          {/* CVFD */}
-          <Button
-            variant="ghost"
-            leftIcon={<MapPin className="w-4 h-4" />}
-            className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          >
-            CVFD
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </Button>
 
           {/* 다크모드 토글 */}
           <Button
             variant="icon"
             onClick={toggleTheme}
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+            className="hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 p-2"
           >
             {theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
+              <Sun className="w-4 h-4" />
             ) : (
-              <Moon className="w-5 h-5" />
+              <Moon className="w-4 h-4" />
             )}
           </Button>
 
           {/* 사용자 메뉴 */}
-          <div className="relative">
-            <Button
-              variant="ghost"
+          <div className="relative ml-2">
+            <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="gap-2 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-              rightIcon={<ChevronDown className="w-4 h-4" />}
+              className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-2 py-1.5 transition-colors"
             >
-              <span className="text-sm font-medium hidden md:block">
-                Jonathan Higgins
-              </span>
-            </Button>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xs font-semibold shadow-md">
+                SR
+              </div>
+              <div className="hidden md:flex flex-col items-start">
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">Sajibur Rahman</span>
+              </div>
+              <ChevronDown className="w-3 h-3 text-gray-500 hidden md:block" />
+            </button>
 
             {userMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
@@ -195,14 +151,14 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                   <Button
                     variant="ghost"
                     leftIcon={<User className="w-4 h-4" />}
-                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                   >
                     프로필
                   </Button>
                   <Button
                     variant="ghost"
                     leftIcon={<Settings className="w-4 h-4" />}
-                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                   >
                     설정
                   </Button>
@@ -211,7 +167,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                     variant="ghost"
                     onClick={handleLogout}
                     leftIcon={<LogOut className="w-4 h-4" />}
-                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="w-full justify-start gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                   >
                     로그아웃
                   </Button>
