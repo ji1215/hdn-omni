@@ -27,6 +27,10 @@ interface GlobalState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
 
+  // Sidebar layout state
+  sidebarLayout: 'vertical' | 'horizontal' | 'two-column';
+  setSidebarLayout: (layout: 'vertical' | 'horizontal' | 'two-column') => void;
+
   // Mobile drawer state
   mobileDrawerOpen: boolean;
   setMobileDrawerOpen: (open: boolean) => void;
@@ -59,6 +63,10 @@ const useStore = create<GlobalState>()(
         })),
         setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
 
+        // Sidebar layout state
+        sidebarLayout: 'vertical',
+        setSidebarLayout: (layout) => set({ sidebarLayout: layout }),
+
         // Mobile drawer state
         mobileDrawerOpen: false,
         setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
@@ -71,7 +79,8 @@ const useStore = create<GlobalState>()(
         partialize: (state) => ({
           theme: state.theme,
           language: state.language,
-          sidebarCollapsed: state.sidebarCollapsed
+          sidebarCollapsed: state.sidebarCollapsed,
+          sidebarLayout: state.sidebarLayout
         }),
       }
     )

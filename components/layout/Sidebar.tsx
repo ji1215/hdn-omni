@@ -91,13 +91,16 @@ const navigation: NavigationItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { sidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen } = useStore();
+  const { sidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen, sidebarLayout } = useStore();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(
     null
   );
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // For two-column mode: track which menu item is selected in first column
+  const [selectedMenuItem, setSelectedMenuItem] = useState<string>(navigation[0]?.name || '');
 
   // Auto-expand parent menu if child is active
   useEffect(() => {
@@ -118,6 +121,31 @@ export default function Sidebar() {
       }
     });
   }, [pathname]);
+
+  // Auto-select active parent menu item in two-column mode
+  useEffect(() => {
+    if (sidebarLayout === 'two-column') {
+      const activeItem = navigation.find((item) => {
+        if (pathname === item.href) return true;
+        if (item.children) {
+          return item.children.some((child) => {
+            const isExactMatch = pathname === child.href;
+            const isSubRoute =
+              pathname.startsWith(child.href + '/') &&
+              !item.children!.some(
+                (sibling) => sibling.href !== child.href && pathname.startsWith(sibling.href)
+              );
+            return isExactMatch || isSubRoute;
+          });
+        }
+        return pathname.startsWith(item.href + '/');
+      });
+
+      if (activeItem && activeItem.name !== selectedMenuItem) {
+        setSelectedMenuItem(activeItem.name);
+      }
+    }
+  }, [pathname, sidebarLayout]);
 
   // ESC 키로 모바일 드로어 닫기
   useEffect(() => {
@@ -182,6 +210,514 @@ export default function Sidebar() {
     }
   };
 
+  // Horizontal mode
+  if (sidebarLayout === 'horizontal') {
+    return (
+      <>
+        {/* 모바일 오버레이 */}
+        {mobileDrawerOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden animate-fade-in"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Horizontal Navbar */}
+        <nav className={cn(
+          'bg-sidebar-bg border-b border-sidebar-hover transition-all duration-300 shadow-lg',
+          // 데스크톱 스타일
+          'hidden md:block',
+        )}>
+          <div className="flex items-center h-14 px-4">
+            {/* Logo */}
+            <div className="flex items-center gap-2 mr-8">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg tracking-wide">hdn-omni</span>
+            </div>
+
+            {/* Navigation Items */}
+            <div className="flex items-center gap-1 flex-1">
+              {navigation.map((item) => {
+                const isActive = isItemActive(item);
+                const hasChildren = item.children && item.children.length > 0;
+
+                return (
+                  <div key={item.name} className="relative group">
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-medium',
+                        isActive
+                          ? 'bg-primary text-white'
+                          : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                      )}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.name}</span>
+                    </Link>
+
+                    {/* Dropdown for children */}
+                    {hasChildren && (
+                      <div className="absolute top-full left-0 mt-1 bg-sidebar-bg border border-sidebar-hover rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[200px]">
+                        <div className="py-2">
+                          {item.children!.map((child) => {
+                            // Check for exact match or if pathname starts with child.href + '/'
+                            // but exclude cases where pathname matches a sibling route
+                            const isExactMatch = pathname === child.href;
+                            const isSubRoute =
+                              pathname.startsWith(child.href + '/') &&
+                              !item.children!.some(
+                                (sibling) =>
+                                  sibling.href !== child.href && pathname.startsWith(sibling.href)
+                              );
+                            const isChildActive = isExactMatch || isSubRoute;
+
+                            return (
+                              <Link
+                                key={child.name}
+                                href={child.href}
+                                className={cn(
+                                  'flex items-center gap-2 px-4 py-2 text-sm transition-colors',
+                                  isChildActive
+                                    ? 'bg-primary/20 text-white font-medium'
+                                    : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                                )}
+                              >
+                                <child.icon className="w-4 h-4" />
+                                <span>{child.name}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Help Button */}
+            <Link
+              href="/help"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-medium',
+                pathname === '/help'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+              )}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>도움말</span>
+            </Link>
+          </div>
+        </nav>
+
+        {/* Mobile Drawer (same as vertical) */}
+        <div
+          className={cn(
+            'bg-sidebar-bg border-r border-sidebar-hover h-full flex flex-col transition-all duration-300 shadow-lg',
+            'fixed inset-y-0 left-0 z-50 w-64 md:hidden',
+            mobileDrawerOpen ? 'translate-x-0 animate-slide-in' : '-translate-x-full'
+          )}
+        >
+          {/* Logo and Toggle */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-hover">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg tracking-wide">hdn-omni</span>
+            </div>
+            <Button
+              variant="icon"
+              onClick={() => setMobileDrawerOpen(false)}
+              className="hover:bg-sidebar-hover text-gray-400 hover:text-white"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto sidebar-scrollbar">
+            {navigation.map((item) => {
+              const isActive = isItemActive(item);
+              const isExpanded = expandedItems.includes(item.name);
+              const hasChildren = item.children && item.children.length > 0;
+
+              return (
+                <div key={item.name}>
+                  <div>
+                    <Link
+                      href={item.href}
+                      onClick={handleLinkClick}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative group',
+                        hasChildren && 'pr-10',
+                        isActive
+                          ? 'bg-primary text-white font-medium shadow-md'
+                          : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                      )}
+                    >
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">{item.name}</span>
+                    </Link>
+
+                    {hasChildren && (
+                      <Button
+                        variant="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpanded(item.name);
+                        }}
+                        className={cn(
+                          'absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 p-0 flex items-center justify-center',
+                          isActive
+                            ? 'text-white hover:bg-primary-600'
+                            : 'text-gray-400 hover:text-white hover:bg-sidebar-hover'
+                        )}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {hasChildren && isExpanded && (
+                    <div className="mt-1 ml-4 space-y-1">
+                      {item.children!.map((child) => {
+                        const isChildActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                        return (
+                          <Link
+                            key={child.name}
+                            href={child.href}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm',
+                              isChildActive
+                                ? 'bg-primary/20 text-white font-medium'
+                                : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                            )}
+                          >
+                            <child.icon className="w-4 h-4 flex-shrink-0" />
+                            <span className="font-medium">{child.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Help Button */}
+          <div className="p-3 border-t border-sidebar-hover">
+            <Link
+              href="/help"
+              onClick={handleLinkClick}
+              className={cn(
+                'flex items-center w-full gap-3 px-3 py-2.5 rounded-lg bg-sidebar-hover text-gray-400 hover:text-white hover:bg-sidebar-active transition-colors',
+                pathname === '/help' && 'bg-primary text-white'
+              )}
+            >
+              <HelpCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">도움말</span>
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Two-column mode
+  if (sidebarLayout === 'two-column') {
+    const selectedItem = navigation.find(item => item.name === selectedMenuItem);
+    const hasChildren = selectedItem?.children && selectedItem.children.length > 0;
+
+    return (
+      <>
+        {/* 모바일 오버레이 */}
+        {mobileDrawerOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden animate-fade-in"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Two-column Sidebar */}
+        <div className={cn(
+          'bg-sidebar-bg border-r border-sidebar-hover h-full flex transition-all duration-300 shadow-lg',
+          // 데스크톱 스타일
+          'hidden md:flex',
+        )}>
+          {/* First Column - Icons Only */}
+          <div className="w-20 border-r border-sidebar-hover flex flex-col">
+            {/* Logo */}
+            <div className="flex items-center justify-center h-16 px-4 border-b border-sidebar-hover">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+            </div>
+
+            {/* First Column Navigation - Icons Only */}
+            <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto sidebar-scrollbar">
+              {navigation.map((item) => {
+                const isActive = isItemActive(item);
+                const isSelected = selectedMenuItem === item.name;
+
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => setSelectedMenuItem(item.name)}
+                    className={cn(
+                      'w-full flex items-center justify-center p-3 rounded-lg transition-all relative group',
+                      isSelected
+                        ? 'bg-primary text-white shadow-md'
+                        : isActive
+                        ? 'bg-primary/20 text-white'
+                        : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                    )}
+                    title={item.name}
+                  >
+                    <item.icon className="w-5 h-5" />
+
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                      {item.name}
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Help Button */}
+            <div className="p-3 border-t border-sidebar-hover">
+              <button
+                onClick={() => setSelectedMenuItem('도움말')}
+                className={cn(
+                  'w-full flex items-center justify-center p-3 rounded-lg transition-all relative group',
+                  selectedMenuItem === '도움말' || pathname === '/help'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                )}
+                title="도움말"
+              >
+                <HelpCircle className="w-5 h-5" />
+
+                {/* Tooltip */}
+                <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                  도움말
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Second Column - Selected Item Details */}
+          <div className="w-64 flex flex-col">
+            {/* Header with selected item name */}
+            <div className="h-16 px-4 border-b border-sidebar-hover flex items-center">
+              <span className="text-white text-base font-semibold">
+                {selectedMenuItem}
+              </span>
+            </div>
+
+            {/* Second Column Content */}
+            <nav className="flex-1 py-4 px-3 overflow-y-auto sidebar-scrollbar">
+              {selectedMenuItem === '도움말' ? (
+                // Help section
+                <Link
+                  href="/help"
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                    pathname === '/help'
+                      ? 'bg-primary text-white font-medium shadow-md'
+                      : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                  )}
+                >
+                  <HelpCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">도움말</span>
+                </Link>
+              ) : hasChildren ? (
+                // Show children if selected item has them
+                <div className="space-y-1">
+                  {selectedItem!.children!.map((child) => {
+                    // Check for exact match or if pathname starts with child.href + '/'
+                    // but exclude cases where pathname matches a sibling route
+                    const isExactMatch = pathname === child.href;
+                    const isSubRoute =
+                      pathname.startsWith(child.href + '/') &&
+                      !selectedItem!.children!.some(
+                        (sibling) =>
+                          sibling.href !== child.href && pathname.startsWith(sibling.href)
+                      );
+                    const isChildActive = isExactMatch || isSubRoute;
+
+                    return (
+                      <Link
+                        key={child.name}
+                        href={child.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                          isChildActive
+                            ? 'bg-primary text-white font-medium shadow-md'
+                            : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                        )}
+                      >
+                        <child.icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="text-sm font-medium">{child.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : selectedItem ? (
+                // Show parent item itself if no children
+                <Link
+                  href={selectedItem.href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                    isItemActive(selectedItem)
+                      ? 'bg-primary text-white font-medium shadow-md'
+                      : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                  )}
+                >
+                  <selectedItem.icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">{selectedItem.name}</span>
+                </Link>
+              ) : null}
+            </nav>
+          </div>
+        </div>
+
+        {/* Mobile Drawer (same as vertical) */}
+        <div
+          className={cn(
+            'bg-sidebar-bg border-r border-sidebar-hover h-full flex flex-col transition-all duration-300 shadow-lg',
+            'fixed inset-y-0 left-0 z-50 w-64 md:hidden',
+            mobileDrawerOpen ? 'translate-x-0 animate-slide-in' : '-translate-x-full'
+          )}
+        >
+          {/* Logo and Toggle */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-hover">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-bold text-lg tracking-wide">hdn-omni</span>
+            </div>
+            <Button
+              variant="icon"
+              onClick={() => setMobileDrawerOpen(false)}
+              className="hover:bg-sidebar-hover text-gray-400 hover:text-white"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto sidebar-scrollbar">
+            {navigation.map((item) => {
+              const isActive = isItemActive(item);
+              const isExpanded = expandedItems.includes(item.name);
+              const hasChildren = item.children && item.children.length > 0;
+
+              return (
+                <div key={item.name}>
+                  <div>
+                    <Link
+                      href={item.href}
+                      onClick={handleLinkClick}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative group',
+                        hasChildren && 'pr-10',
+                        isActive
+                          ? 'bg-primary text-white font-medium shadow-md'
+                          : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                      )}
+                    >
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">{item.name}</span>
+                    </Link>
+
+                    {hasChildren && (
+                      <Button
+                        variant="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpanded(item.name);
+                        }}
+                        className={cn(
+                          'absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 p-0 flex items-center justify-center',
+                          isActive
+                            ? 'text-white hover:bg-primary-600'
+                            : 'text-gray-400 hover:text-white hover:bg-sidebar-hover'
+                        )}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {hasChildren && isExpanded && (
+                    <div className="mt-1 ml-4 space-y-1">
+                      {item.children!.map((child) => {
+                        const isChildActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                        return (
+                          <Link
+                            key={child.name}
+                            href={child.href}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm',
+                              isChildActive
+                                ? 'bg-primary/20 text-white font-medium'
+                                : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                            )}
+                          >
+                            <child.icon className="w-4 h-4 flex-shrink-0" />
+                            <span className="font-medium">{child.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Help Button */}
+          <div className="p-3 border-t border-sidebar-hover">
+            <Link
+              href="/help"
+              onClick={handleLinkClick}
+              className={cn(
+                'flex items-center w-full gap-3 px-3 py-2.5 rounded-lg bg-sidebar-hover text-gray-400 hover:text-white hover:bg-sidebar-active transition-colors',
+                pathname === '/help' && 'bg-primary text-white'
+              )}
+            >
+              <HelpCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">도움말</span>
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Vertical mode (default)
   return (
     <>
       {/* 모바일 오버레이 */}

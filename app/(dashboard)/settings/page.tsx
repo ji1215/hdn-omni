@@ -15,11 +15,14 @@ import {
   HardDrive,
   Download,
   Upload,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/common';
+import useStore from '@/store/useStore';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
+  const { sidebarLayout, setSidebarLayout } = useStore();
 
   const tabs = [
     { id: 'general', name: '일반', icon: SettingsIcon },
@@ -270,6 +273,29 @@ export default function SettingsPage() {
                       <option>시스템 설정 따라가기</option>
                       <option>라이트 모드</option>
                       <option>다크 모드</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <LayoutDashboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          사이드바 레이아웃
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          사이드바 배치 방식을 선택합니다
+                        </p>
+                      </div>
+                    </div>
+                    <select
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+                      value={sidebarLayout}
+                      onChange={(e) => setSidebarLayout(e.target.value as 'vertical' | 'horizontal' | 'two-column')}
+                    >
+                      <option value="vertical">세로 모드</option>
+                      <option value="horizontal">가로 모드</option>
+                      <option value="two-column">2단 컬럼 모드</option>
                     </select>
                   </div>
                 </div>
