@@ -4,56 +4,43 @@ import { useState } from 'react';
 import { Search, Filter, X, RotateCcw, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/common';
-import { useDepartmentOptions } from '@/hooks/useDepartments';
 
 interface FilterOption {
   value: string;
   label: string;
 }
 
-interface UserFiltersProps {
+interface DepartmentFiltersProps {
   onSearchChange: (search: string) => void;
   onFiltersChange: (filters: {
-    role?: string;
     status?: string;
-    department?: string;
+    parentId?: string | null;
   }) => void;
   className?: string;
 }
 
 // 필터 옵션 정의
-const roleOptions: FilterOption[] = [
-  { value: '', label: '전체 역할' },
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'network_admin', label: 'Network Admin' },
-  { value: 'monitoring_user', label: 'Monitoring User' },
-  { value: 'guest', label: 'Guest' },
-];
-
 const statusOptions: FilterOption[] = [
   { value: '', label: '전체 상태' },
   { value: 'active', label: '활성' },
   { value: 'inactive', label: '비활성' },
-  { value: 'suspended', label: '정지' },
+];
+
+const levelOptions: FilterOption[] = [
+  { value: '', label: '전체 계층' },
+  { value: 'top', label: '최상위 부서만' },
+  { value: 'sub', label: '하위 부서만' },
 ];
 
 /**
- * 사용자 목록 필터링 컴포넌트
- * 검색, 역할, 상태, 부서별 필터링 기능을 제공합니다.
+ * 부서 목록 필터링 컴포넌트
+ * 검색, 상태, 계층별 필터링 기능을 제공합니다.
  */
-export function UserFilters({ onSearchChange, onFiltersChange, className }: UserFiltersProps) {
+export function DepartmentFilters({ onSearchChange, onFiltersChange, className }: DepartmentFiltersProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
-  // 부서 옵션 동적 로드
-  const { data: departmentOptionsData } = useDepartmentOptions();
-  const departmentOptions: FilterOption[] = [
-    { value: '', label: '전체 부서' },
-    ...(departmentOptionsData?.map((d) => ({ value: d.label, label: d.label })) || []),
-  ];
 
   // 검색어 변경 처리
   const handleSearchChange = (value: string) => {
@@ -63,50 +50,37 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
 
   // 필터 변경 처리
   const handleFilterChange = (type: string, value: string) => {
-    let newFilters = {
-      role: selectedRole,
-      status: selectedStatus,
-      department: selectedDepartment,
-    };
+    let newFilters: { status?: string; parentId?: string | null } = {};
 
     switch (type) {
-      case 'role':
-        setSelectedRole(value);
-        newFilters.role = value;
-        break;
       case 'status':
         setSelectedStatus(value);
-        newFilters.status = value;
+        if (value) newFilters.status = value;
+        if (selectedLevel === 'top') newFilters.parentId = null;
+        else if (selectedLevel === 'sub') newFilters.parentId = 'any';
         break;
-      case 'department':
-        setSelectedDepartment(value);
-        newFilters.department = value;
+      case 'level':
+        setSelectedLevel(value);
+        if (selectedStatus) newFilters.status = selectedStatus;
+        if (value === 'top') newFilters.parentId = null;
+        else if (value === 'sub') newFilters.parentId = 'any';
         break;
     }
 
-    // 빈 문자열은 필터에서 제외
-    const activeFilters = Object.entries(newFilters).reduce((acc, [key, value]) => {
-      if (value) {
-        acc[key as keyof typeof newFilters] = value;
-      }
-      return acc;
-    }, {} as typeof newFilters);
-
-    onFiltersChange(activeFilters);
+    onFiltersChange(newFilters);
   };
 
   // 필터 초기화
   const handleResetFilters = () => {
     setSearchQuery('');
-    setSelectedRole('');
     setSelectedStatus('');
-    setSelectedDepartment('');
+    setSelectedLevel('');
     onSearchChange('');
     onFiltersChange({});
   };
 
   // 활성 필터 개수 계산
-  const activeFilterCount = [selectedRole, selectedStatus, selectedDepartment].filter(Boolean).length;
+  const activeFilterCount = [selectedStatus, selectedLevel].filter(Boolean).length;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -118,7 +92,7 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="이름, 이메일, 부서로 검색..."
+              placeholder="부서명, 설명으로 검색..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:text-gray-200"
@@ -173,25 +147,7 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
       {/* 필터 옵션 */}
       {showFilters && (
         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 역할 필터 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                역할
-              </label>
-              <select
-                value={selectedRole}
-                onChange={(e) => handleFilterChange('role', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:text-gray-200"
-              >
-                {roleOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 상태 필터 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -210,17 +166,17 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
               </select>
             </div>
 
-            {/* 부서 필터 */}
+            {/* 계층 필터 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                부서
+                계층
               </label>
               <select
-                value={selectedDepartment}
-                onChange={(e) => handleFilterChange('department', e.target.value)}
+                value={selectedLevel}
+                onChange={(e) => handleFilterChange('level', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:text-gray-200"
               >
-                {departmentOptions.map((option) => (
+                {levelOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -233,19 +189,6 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
           {activeFilterCount > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-wrap gap-2">
-                {selectedRole && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
-                    역할: {roleOptions.find((opt) => opt.value === selectedRole)?.label}
-                    <Button
-                      variant="icon"
-                      size="sm"
-                      onClick={() => handleFilterChange('role', '')}
-                      className="ml-1 hover:text-blue-600 dark:hover:text-blue-400 p-0"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </span>
-                )}
                 {selectedStatus && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full">
                     상태: {statusOptions.find((opt) => opt.value === selectedStatus)?.label}
@@ -259,14 +202,14 @@ export function UserFilters({ onSearchChange, onFiltersChange, className }: User
                     </Button>
                   </span>
                 )}
-                {selectedDepartment && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full">
-                    부서: {departmentOptions.find((opt) => opt.value === selectedDepartment)?.label}
+                {selectedLevel && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
+                    계층: {levelOptions.find((opt) => opt.value === selectedLevel)?.label}
                     <Button
                       variant="icon"
                       size="sm"
-                      onClick={() => handleFilterChange('department', '')}
-                      className="ml-1 hover:text-purple-600 dark:hover:text-purple-400 p-0"
+                      onClick={() => handleFilterChange('level', '')}
+                      className="ml-1 hover:text-blue-600 dark:hover:text-blue-400 p-0"
                     >
                       <X className="w-3 h-3" />
                     </Button>

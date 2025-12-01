@@ -8,6 +8,7 @@ import { X, Eye, EyeOff, Copy } from 'lucide-react';
 import { CreateUserRequest, UserRole } from '@/types/user';
 import { generateTemporaryPassword } from '@/lib/password';
 import { Button } from '@/components/common';
+import { useDepartmentOptions } from '@/hooks/useDepartments';
 
 // Zod 스키마 정의
 const createUserSchema = z.object({
@@ -36,6 +37,9 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // 부서 옵션 동적 로드
+  const { data: departmentOptions } = useDepartmentOptions();
 
   const {
     register,
@@ -157,12 +161,17 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   부서 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   {...register('department')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="네트워크 운영팀"
-                />
+                >
+                  <option value="">부서를 선택하세요</option>
+                  {departmentOptions?.map((dept) => (
+                    <option key={dept.value} value={dept.label}>
+                      {dept.label}
+                    </option>
+                  ))}
+                </select>
                 {errors.department && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                     {errors.department.message}

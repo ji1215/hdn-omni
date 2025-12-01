@@ -172,51 +172,29 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* 페이지 헤더 */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Member Database</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">사용자 관리</h1>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Last updated : 1 hour ago
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Last updated : 1 hour ago</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            variant="secondary"
-            size="md"
-            className="text-sm"
-          >
+          <Button variant="secondary" size="md" className="text-sm">
             December 2023
           </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            className="text-sm"
-          >
+          <Button variant="secondary" size="md" className="text-sm">
             Filter
           </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            className="text-sm"
-          >
+          <Button variant="secondary" size="md" className="text-sm">
             Sort
           </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            className="text-sm"
-          >
+          <Button variant="secondary" size="md" className="text-sm">
             Refresh
           </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            className="text-sm"
-          >
+          <Button variant="secondary" size="md" className="text-sm">
             View Setting
           </Button>
           <Button
@@ -234,44 +212,44 @@ export default function UsersPage() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
-          title="Salary Rate"
-          subtitle="Member Average"
-          value={`${((stats.active / stats.total) * 100 || 0).toFixed(1)}%`}
+          title="Total Users"
+          subtitle="전체 사용자"
+          value={stats.total.toString()}
           trend={{
-            value: '+10%',
+            value: `${stats.total} users`,
+            direction: 'neutral',
+          }}
+          icon={Users}
+        />
+        <StatCard
+          title="Active Users"
+          subtitle="활성 사용자"
+          value={stats.active.toString()}
+          trend={{
+            value: `${((stats.active / stats.total) * 100 || 0).toFixed(1)}%`,
             direction: 'up',
           }}
-          icon={MoreVertical}
+          icon={Users}
         />
         <StatCard
-          title="Active Rate"
-          subtitle="Member Average"
-          value={`${((stats.active / stats.total) * 100 || 0).toFixed(1)}%`}
+          title="Admin Users"
+          subtitle="관리자"
+          value={stats.admin.toString()}
           trend={{
-            value: '0.0%',
+            value: `${((stats.admin / stats.total) * 100 || 0).toFixed(1)}%`,
             direction: 'neutral',
           }}
-          icon={MoreVertical}
+          icon={Shield}
         />
         <StatCard
-          title="Hours Rate"
-          subtitle="Member Average"
-          value={`${((stats.admin / stats.total) * 100 || 0).toFixed(1)}%`}
+          title="Inactive Users"
+          subtitle="비활성 사용자"
+          value={stats.inactive.toString()}
           trend={{
-            value: '-2.0%',
+            value: `${((stats.inactive / stats.total) * 100 || 0).toFixed(1)}%`,
             direction: 'down',
           }}
-          icon={MoreVertical}
-        />
-        <StatCard
-          title="Work Rate"
-          subtitle="Member Average"
-          value={`${((stats.inactive / stats.total) * 100 || 0).toFixed(1)}%`}
-          trend={{
-            value: '0.0%',
-            direction: 'neutral',
-          }}
-          icon={MoreVertical}
+          icon={UserX}
         />
       </div>
 

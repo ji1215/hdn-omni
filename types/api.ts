@@ -118,6 +118,15 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/roles/${id}`,
   },
 
+  // 부서
+  DEPARTMENTS: {
+    LIST: '/departments',
+    GET: (id: string) => `/departments/${id}`,
+    CREATE: '/departments',
+    UPDATE: (id: string) => `/departments/${id}`,
+    DELETE: (id: string) => `/departments/${id}`,
+  },
+
   // 디바이스
   DEVICES: {
     LIST: '/devices',

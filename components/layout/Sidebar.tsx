@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Search,
   Plus,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useStore from '@/store/useStore';
@@ -74,7 +75,9 @@ const navigation: NavigationItem[] = [
     href: '/security',
     icon: Shield,
     children: [
-      { name: '사용자 관리', href: '/security/users', icon: Users },
+      { name: '회원 관리', href: '/security/members', icon: Users },
+      { name: '사용자 관리', href: '/security/users', icon: User },
+      { name: '부서 관리', href: '/security/departments', icon: Building2 },
       { name: '역할 관리', href: '/security/roles', icon: Shield },
       { name: '로그', href: '/security/audit', icon: FileText },
     ],
