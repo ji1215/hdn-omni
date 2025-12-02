@@ -179,7 +179,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-2 mb-2">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">사용자 관리</h1>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Last updated : 1 hour ago</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400"></p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button variant="secondary" size="md" className="text-sm">

@@ -62,7 +62,7 @@ export function DepartmentTreeNode({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group relative rounded-lg border transition-all duration-200',
+        'group relative rounded-lg border transition-all duration-200 overflow-hidden',
         isDragging && 'opacity-50',
         isOver && 'border-blue-500 bg-blue-50 dark:bg-blue-900/20',
         isSelected && !isDragging && !isOver && 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md',
@@ -70,14 +70,17 @@ export function DepartmentTreeNode({
       )}
     >
       <div
-        className="flex items-center gap-2 p-3"
-        style={{ paddingLeft: `${level * 24 + 12}px` }}
+        className="flex items-center gap-1 p-2 overflow-hidden"
+        style={{
+          paddingLeft: `${Math.min(level * 16, 32) + 8}px`,
+          paddingRight: '8px'
+        }}
       >
         {/* 드래그 핸들 */}
         <button
           {...attributes}
           {...listeners}
-          className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="hidden xl:block p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
           title="드래그하여 이동"
         >
           <GripVertical className="w-4 h-4" />
@@ -87,26 +90,26 @@ export function DepartmentTreeNode({
         <button
           onClick={onToggleExpand}
           className={cn(
-            'p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+            'p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0',
             !hasChildren && 'invisible'
           )}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-3 h-3 text-gray-500" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500" />
+            <ChevronRight className="w-3 h-3 text-gray-500" />
           )}
         </button>
 
         {/* 부서 아이콘 */}
         <div className={cn(
-          'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+          'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
           level === 0
             ? 'bg-blue-100 dark:bg-blue-900/30'
             : 'bg-gray-100 dark:bg-gray-700'
         )}>
           <Building2 className={cn(
-            'w-5 h-5',
+            'w-4 h-4',
             level === 0
               ? 'text-blue-600 dark:text-blue-400'
               : 'text-gray-600 dark:text-gray-400'
@@ -115,23 +118,23 @@ export function DepartmentTreeNode({
 
         {/* 부서 정보 - 클릭하면 사용자 필터링 */}
         <div
-          className="flex-1 min-w-0 cursor-pointer"
+          className="flex-1 min-w-0 cursor-pointer overflow-hidden"
           onClick={onSelect}
         >
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          <div className="flex items-center gap-1 overflow-hidden">
+            <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate block">
               {department.name}
             </span>
             <span
               className={cn(
-                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                'hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0',
                 DepartmentStatusColors[department.status]
               )}
             >
               {DepartmentStatusLabels[department.status]}
             </span>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate hidden md:block">
             {department.description}
           </div>
         </div>
@@ -139,44 +142,44 @@ export function DepartmentTreeNode({
         {/* 인원 수 - 클릭하면 멤버 목록 표시 */}
         <button
           onClick={onViewMembers}
-          className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
+          className="flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer flex-shrink-0 ml-1"
           title="멤버 목록 보기"
         >
-          <Users className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Users className="w-3 h-3 text-gray-500 flex-shrink-0" />
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
             {department.memberCount}
           </span>
         </button>
 
         {/* 액션 버튼 */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="hidden xl:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={onViewMembers}
-            className="p-2 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-100"
+            className="p-1.5 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-100"
             title="멤버 관리"
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            className="p-1.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
             title="수정"
           >
-            <Edit className="w-4 h-4" />
+            <Edit className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="p-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-100"
+            className="p-1.5 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-100"
             disabled={department.memberCount > 0}
             title={department.memberCount > 0 ? '소속 인원이 있는 부서는 삭제할 수 없습니다' : '삭제'}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>

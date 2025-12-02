@@ -17,12 +17,36 @@ import {
   Upload,
   LayoutDashboard,
 } from 'lucide-react';
-import { Button } from '@/components/common';
+import { Button, ChangePasswordModal } from '@/components/common';
 import useStore from '@/store/useStore';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
-  const { sidebarLayout, setSidebarLayout } = useStore();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const { sidebarLayout, setSidebarLayout, user } = useStore();
+
+  // 비밀번호 변경 처리 함수
+  const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
+    try {
+      // TODO: API 호출로 실제 비밀번호 변경 로직 구현
+      // 예시:
+      // const response = await fetch('/api/users/change-password', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ currentPassword, newPassword }),
+      // });
+      // if (!response.ok) throw new Error('비밀번호 변경 실패');
+
+      // 임시로 성공 처리
+      console.log('비밀번호 변경 요청:', { currentPassword: '***', newPassword: '***' });
+
+      // 성공 알림 (실제로는 토스트 알림 등을 사용)
+      alert('비밀번호가 성공적으로 변경되었습니다.');
+    } catch (error) {
+      // 에러를 다시 throw하여 모달에서 처리하도록 함
+      throw error;
+    }
+  };
 
   const tabs = [
     { id: 'general', name: '일반', icon: SettingsIcon },
@@ -210,7 +234,11 @@ export default function SettingsPage() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="primary" size="sm">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsPasswordModalOpen(true)}
+                    >
                       변경
                     </Button>
                   </div>
@@ -379,6 +407,14 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* 비밀번호 변경 모달 */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSubmit={handlePasswordChange}
+        userId={user?.id || ''}
+      />
     </div>
   );
 }
