@@ -6,9 +6,22 @@ export type DeviceRole = 'spine' | 'leaf' | 'access' | 'core' | 'aggregation' | 
 // 노드 상태 심각도 정의
 export type NodeSeverity = 'normal' | 'minor' | 'major' | 'critical';
 
+// VxLAN 터널 정의
+export interface VxlanTunnel {
+  id: string;
+  vni: number; // VXLAN Network Identifier
+  sourceVtep: string; // Source VTEP IP
+  destVtep: string; // Destination VTEP IP
+  sourceNodeId: string;
+  destNodeId: string;
+  status: 'active' | 'inactive' | 'error';
+  encapsulation?: 'vxlan' | 'vxlan-gpe';
+  mtu?: number;
+}
+
 export interface NetworkNode {
   id: string;
-  type: 'switch' | 'router' | 'host' | 'controller' | 'firewall' | 'group';
+  type: 'switch' | 'router' | 'host' | 'controller' | 'firewall' | 'group' | 'vtep';
   label: string;
   status: 'active' | 'inactive' | 'warning' | 'error';
   severity?: NodeSeverity;
@@ -17,6 +30,8 @@ export interface NetworkNode {
   mac?: string;
   vlan?: number;
   vlans?: number[]; // 다중 VLAN 지원
+  vxlanVni?: number; // VxLAN VNI
+  vtepIp?: string; // VTEP IP for VxLAN
   port?: number;
   bandwidth?: number;
   bandwidthLabel?: string; // '40G', '10G' 등
@@ -39,7 +54,9 @@ export interface NetworkLink {
   bandwidth: number;
   utilization: number; // 0-100 percentage
   status: 'active' | 'congested' | 'down';
-  type: 'ethernet' | 'optical' | 'wireless';
+  type: 'ethernet' | 'optical' | 'wireless' | 'vxlan';
+  isVxlanTunnel?: boolean;
+  vxlanVni?: number;
   latency?: number; // ms
   packetLoss?: number; // percentage
   metadata?: {
@@ -50,6 +67,32 @@ export interface NetworkLink {
 export interface TopologyData {
   nodes: NetworkNode[];
   links: NetworkLink[];
+  vxlanTunnels?: VxlanTunnel[];
+}
+
+// 에디터 액션 타입
+export type EditorAction =
+  | { type: 'ADD_NODE'; node: NetworkNode }
+  | { type: 'DELETE_NODE'; nodeId: string }
+  | { type: 'UPDATE_NODE'; nodeId: string; updates: Partial<NetworkNode> }
+  | { type: 'ADD_LINK'; link: NetworkLink }
+  | { type: 'DELETE_LINK'; linkId: string }
+  | { type: 'UPDATE_LINK'; linkId: string; updates: Partial<NetworkLink> }
+  | { type: 'ADD_VXLAN_TUNNEL'; tunnel: VxlanTunnel }
+  | { type: 'DELETE_VXLAN_TUNNEL'; tunnelId: string };
+
+// 에디터 모드
+export type EditorMode = 'view' | 'add-node' | 'add-link' | 'delete' | 'edit';
+
+// 에디터 상태
+export interface TopologyEditorState {
+  mode: EditorMode;
+  selectedNodeId: string | null;
+  selectedLinkId: string | null;
+  isEditing: boolean;
+  pendingConnection: {
+    sourceNodeId: string;
+  } | null;
 }
 
 export interface TopologyLayoutType {

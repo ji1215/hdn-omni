@@ -11,7 +11,10 @@ import {
   TopologyViewOptions,
   VlanColorConfig,
   ProvisioningConfig,
+  EditorMode,
+  DeviceRole,
 } from '@/types/topology';
+import { useTopologyEditor } from '@/hooks/useTopologyEditor';
 import {
   ZoomIn,
   ZoomOut,
@@ -21,6 +24,16 @@ import {
   Network as NetworkIcon,
   Plus,
   X,
+  MousePointer,
+  Link2,
+  Edit3,
+  Trash2,
+  Undo,
+  Save,
+  Server,
+  Router,
+  Monitor,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { cn } from '@/lib/utils';
@@ -69,7 +82,26 @@ interface VisTopologyProps {
   onViewModeChange?: (mode: TopologyViewMode) => void;
   onNodeClick?: (node: NetworkNode) => void;
   onLinkClick?: (link: NetworkLink) => void;
+  editable?: boolean;
 }
+
+// 노드 타입 옵션
+const nodeTypes: { type: NetworkNode['type']; icon: React.ReactNode; label: string }[] = [
+  { type: 'switch', icon: <NetworkIcon className="w-4 h-4" />, label: '스위치' },
+  { type: 'router', icon: <Router className="w-4 h-4" />, label: '라우터' },
+  { type: 'host', icon: <Monitor className="w-4 h-4" />, label: '호스트' },
+  { type: 'controller', icon: <Server className="w-4 h-4" />, label: '컨트롤러' },
+  { type: 'firewall', icon: <Shield className="w-4 h-4" />, label: '방화벽' },
+  { type: 'vtep', icon: <Layers className="w-4 h-4" />, label: 'VTEP' },
+];
+
+// VLAN 옵션
+const VLAN_OPTIONS = [
+  { value: 100, label: 'VLAN 100', color: '#EF4444' },
+  { value: 200, label: 'VLAN 200', color: '#F97316' },
+  { value: 300, label: 'VLAN 300', color: '#22C55E' },
+  { value: 400, label: 'VLAN 400', color: '#8B5CF6' },
+];
 
 export function VisTopology({
   data,
@@ -78,6 +110,7 @@ export function VisTopology({
   onViewModeChange,
   onNodeClick,
   onLinkClick,
+  editable = false,
 }: VisTopologyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
@@ -100,6 +133,35 @@ export function VisTopology({
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number; direction: 'up' | 'down' } | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [showProvisioningPanel, setShowProvisioningPanel] = useState(false);
+
+  // 에디터 상태
+  const editor = useTopologyEditor({
+    initialData: data || { nodes: [], links: [] },
+  });
+  const [editorMode, setEditorMode] = useState<EditorMode>('view');
+  const [showNodeMenu, setShowNodeMenu] = useState(false);
+  const [showNodeModal, setShowNodeModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingNode, setEditingNode] = useState<NetworkNode | null>(null);
+  const [editingLink, setEditingLink] = useState<NetworkLink | null>(null);
+  const [nodeFormData, setNodeFormData] = useState<Partial<NetworkNode>>({
+    type: 'switch',
+    label: '',
+    status: 'active',
+    ip: '',
+    vlan: undefined,
+  });
+  const [linkFormData, setLinkFormData] = useState<Partial<NetworkLink>>({
+    source: '',
+    target: '',
+    bandwidth: 10000,
+    status: 'active',
+    type: 'ethernet',
+  });
+
+  // 에디터 데이터가 변경되면 컴포넌트 상태 업데이트
+  const currentData = editable ? editor.data : data;
+
   const [provisioningConfigs] = useState<ProvisioningConfig[]>([
     {
       type: 'vlan',
@@ -344,9 +406,9 @@ export function VisTopology({
 
   // 데이터를 vis.js 형식으로 변환
   const transformData = useCallback((): Data => {
-    if (!data) return { nodes: [], edges: [] };
+    if (!currentData) return { nodes: [], edges: [] };
 
-    const nodes: Node[] = data.nodes.map(node => {
+    const nodes: Node[] = currentData.nodes.map(node => {
       const colors = getNodeColor(node, viewOptions.viewMode);
       const iconUrl = getNetworkIconSvg(node.type, node.role, colors.background, colors.border, isDarkMode);
 
@@ -368,8 +430,8 @@ export function VisTopology({
       } as Node;
     });
 
-    const edges: Edge[] = data.links.map(link => {
-      const sourceNode = data.nodes.find(n => n.id === link.source);
+    const edges: Edge[] = currentData.links.map(link => {
+      const sourceNode = currentData.nodes.find(n => n.id === link.source);
       const edgeColor = getEdgeColor(link, viewOptions.viewMode, sourceNode?.vlan);
       const bandwidthLabel = viewOptions.showBandwidth ? getBandwidthLabel(link.bandwidth) : '';
 
@@ -392,11 +454,11 @@ export function VisTopology({
     });
 
     return { nodes, edges };
-  }, [data, viewOptions, isDarkMode]);
+  }, [currentData, viewOptions, isDarkMode]);
 
   // 네트워크 초기화
   useEffect(() => {
-    if (!containerRef.current || !data) return;
+    if (!containerRef.current || !currentData) return;
 
     const transformedData = transformData();
 
@@ -418,7 +480,7 @@ export function VisTopology({
     networkRef.current.on('click', (params) => {
       if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
-        const node = data.nodes.find(n => n.id === nodeId);
+        const node = currentData.nodes.find(n => n.id === nodeId);
         if (node && networkRef.current && containerRef.current) {
           // 노드의 캔버스 좌표를 DOM 좌표로 변환
           const positions = networkRef.current.getPositions([nodeId]);
@@ -457,11 +519,11 @@ export function VisTopology({
         }
       } else if (params.edges.length > 0) {
         const edgeId = params.edges[0];
-        const link = data.links.find(l => l.id === edgeId);
+        const link = currentData.links.find(l => l.id === edgeId);
         if (link && networkRef.current && containerRef.current) {
           // 엣지의 중간점 계산
-          const sourceNode = data.nodes.find(n => n.id === link.source);
-          const targetNode = data.nodes.find(n => n.id === link.target);
+          const sourceNode = currentData.nodes.find(n => n.id === link.source);
+          const targetNode = currentData.nodes.find(n => n.id === link.target);
           if (sourceNode && targetNode) {
             const positions = networkRef.current.getPositions([link.source, link.target]);
             const midX = (positions[link.source].x + positions[link.target].x) / 2;
@@ -520,11 +582,11 @@ export function VisTopology({
 
     // 그리드 레이아웃일 때 수동 배치
     if (selectedLayout === 'grid') {
-      const cols = Math.ceil(Math.sqrt(data.nodes.length));
+      const cols = Math.ceil(Math.sqrt(currentData.nodes.length));
       const spacing = 150;
-      data.nodes.forEach((node, index) => {
+      currentData.nodes.forEach((node, index) => {
         const x = (index % cols) * spacing - (cols * spacing) / 2;
-        const y = Math.floor(index / cols) * spacing - ((Math.ceil(data.nodes.length / cols)) * spacing) / 2;
+        const y = Math.floor(index / cols) * spacing - ((Math.ceil(currentData.nodes.length / cols)) * spacing) / 2;
         networkRef.current?.moveNode(node.id, x, y);
       });
       networkRef.current?.fit();
@@ -538,10 +600,10 @@ export function VisTopology({
 
   // viewMode나 isDarkMode 변경 시 노드/엣지 업데이트
   useEffect(() => {
-    if (!networkRef.current || !data || !nodesDataSetRef.current || !edgesDataSetRef.current) return;
+    if (!networkRef.current || !currentData || !nodesDataSetRef.current || !edgesDataSetRef.current) return;
 
     // 노드 업데이트
-    const updatedNodes = data.nodes.map(node => {
+    const updatedNodes = currentData.nodes.map(node => {
       const colors = getNodeColor(node, viewOptions.viewMode);
       const iconUrl = getNetworkIconSvg(node.type, node.role, colors.background, colors.border, isDarkMode);
       return {
@@ -555,8 +617,8 @@ export function VisTopology({
     nodesDataSetRef.current.update(updatedNodes);
 
     // 엣지 업데이트
-    const updatedEdges = data.links.map(link => {
-      const sourceNode = data.nodes.find(n => n.id === link.source);
+    const updatedEdges = currentData.links.map(link => {
+      const sourceNode = currentData.nodes.find(n => n.id === link.source);
       const edgeColor = getEdgeColor(link, viewOptions.viewMode, sourceNode?.vlan);
       return {
         id: link.id,
@@ -568,7 +630,7 @@ export function VisTopology({
       };
     });
     edgesDataSetRef.current.update(updatedEdges);
-  }, [viewOptions.viewMode, isDarkMode, data]);
+  }, [viewOptions.viewMode, isDarkMode, currentData]);
 
   // 줌 컨트롤
   const handleZoomIn = useCallback(() => {
@@ -730,32 +792,194 @@ export function VisTopology({
             {/* 상태 정보 */}
             <div className="flex items-center gap-2">
               <span className="text-gray-500 dark:text-gray-400">노드:</span>
-              <span className="text-gray-900 dark:text-white font-medium">{data?.nodes.length || 0}</span>
+              <span className="text-gray-900 dark:text-white font-medium">{currentData?.nodes.length || 0}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-gray-500 dark:text-gray-400">링크:</span>
-              <span className="text-gray-900 dark:text-white font-medium">{data?.links.length || 0}</span>
+              <span className="text-gray-900 dark:text-white font-medium">{currentData?.links.length || 0}</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-gray-500 dark:text-gray-400">{data?.nodes.filter(n => n.status === 'active').length || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400">{currentData?.nodes.filter(n => n.status === 'active').length || 0}</span>
               </div>
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                <span className="text-gray-500 dark:text-gray-400">{data?.nodes.filter(n => n.status === 'warning').length || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400">{currentData?.nodes.filter(n => n.status === 'warning').length || 0}</span>
               </div>
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-gray-500 dark:text-gray-400">{data?.nodes.filter(n => n.status === 'error').length || 0}</span>
+                <span className="text-gray-500 dark:text-gray-400">{currentData?.nodes.filter(n => n.status === 'error').length || 0}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* 에디터 툴바 */}
+      {editable && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20">
+          <div className="flex items-center gap-2">
+            {/* 모드 선택 버튼 */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1.5 flex items-center gap-1 border border-gray-200 dark:border-gray-700">
+              <Button
+                variant="icon"
+                onClick={() => setEditorMode('view')}
+                title="선택 모드"
+                className={cn(
+                  'relative',
+                  editorMode === 'view' && 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                )}
+              >
+                <MousePointer className="w-4 h-4" />
+              </Button>
+
+              {/* 노드 추가 드롭다운 */}
+              <div className="relative">
+                <Button
+                  variant="icon"
+                  onClick={() => setShowNodeMenu(!showNodeMenu)}
+                  title="노드 추가"
+                  className={cn(
+                    'relative',
+                    editorMode === 'add-node' && 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400'
+                  )}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+
+                {showNodeMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowNodeMenu(false)}
+                    />
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 min-w-[140px]">
+                      {nodeTypes.map((nodeType) => (
+                        <button
+                          key={nodeType.type}
+                          onClick={() => {
+                            setNodeFormData({ ...nodeFormData, type: nodeType.type, label: '' });
+                            setEditingNode(null);
+                            setShowNodeModal(true);
+                            setEditorMode('add-node');
+                            setShowNodeMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          {nodeType.icon}
+                          <span>{nodeType.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <Button
+                variant="icon"
+                onClick={() => setEditorMode('add-link')}
+                title="연결 추가"
+                className={cn(
+                  'relative',
+                  editorMode === 'add-link' && 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                )}
+              >
+                <Link2 className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="icon"
+                onClick={() => setEditorMode('edit')}
+                title="편집 모드"
+                className={cn(
+                  'relative',
+                  editorMode === 'edit' && 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400'
+                )}
+              >
+                <Edit3 className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="icon"
+                onClick={() => setEditorMode('delete')}
+                title="삭제 모드"
+                className={cn(
+                  'relative',
+                  editorMode === 'delete' && 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                )}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1.5 flex items-center gap-1 border border-gray-200 dark:border-gray-700">
+              <Button
+                variant="icon"
+                onClick={editor.undo}
+                title="실행 취소"
+                disabled={!editor.canUndo}
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Undo className="w-4 h-4" />
+              </Button>
+
+              {editor.hasChanges && (
+                <>
+                  <Button
+                    variant="icon"
+                    onClick={editor.save}
+                    title="저장"
+                    className="text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900"
+                  >
+                    <Save className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="icon"
+                    onClick={editor.cancel}
+                    title="취소"
+                    className="text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* 현재 모드 표시 */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg px-3 py-1.5 border border-gray-200 dark:border-gray-700">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                {editorMode === 'view' && '선택'}
+                {editorMode === 'add-node' && '노드 추가'}
+                {editorMode === 'add-link' && '연결 추가'}
+                {editorMode === 'edit' && '편집'}
+                {editorMode === 'delete' && '삭제'}
+              </span>
+            </div>
+          </div>
+
+          {/* 연결 모드 메시지 */}
+          {editorMode === 'add-link' && (
+            <div className="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-sm text-blue-700 dark:text-blue-300 text-center">
+              {editor.editorState.pendingConnection
+                ? `"${currentData?.nodes.find(n => n.id === editor.editorState.pendingConnection?.sourceNodeId)?.label}"에서 연결할 대상 노드를 클릭하세요`
+                : '연결을 시작할 노드를 클릭하세요'}
+              {editor.editorState.pendingConnection && (
+                <button
+                  onClick={editor.cancelConnection}
+                  className="ml-2 underline hover:no-underline"
+                >
+                  취소
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 좌측 컨트롤 패널 */}
-      <div className="absolute top-16 left-4 z-10 flex flex-col gap-2">
+      <div className="absolute top-16 left-4 z-10 flex flex-col gap-2" style={{ top: editable ? '7rem' : '4rem' }}>
         {/* 줌 컨트롤 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 flex flex-col gap-1 border border-gray-200 dark:border-gray-700">
           <Button
@@ -1125,9 +1349,215 @@ export function VisTopology({
       {/* vis.js 네트워크 컨테이너 */}
       <div
         ref={containerRef}
-        className="pt-12 h-full w-full"
-        style={{ minHeight: '500px' }}
+        className="h-full w-full"
+        style={{ minHeight: '500px', paddingTop: editable ? '5rem' : '3rem' }}
       />
+
+      {/* 노드 편집 모달 */}
+      {showNodeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowNodeModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingNode ? '노드 편집' : '노드 추가'}
+              </h2>
+              <button
+                onClick={() => setShowNodeModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editingNode) {
+                  editor.updateNode(editingNode.id, nodeFormData);
+                } else {
+                  editor.addNode(nodeFormData);
+                }
+                setShowNodeModal(false);
+                setEditorMode('view');
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">타입</label>
+                <select
+                  value={nodeFormData.type}
+                  onChange={(e) => setNodeFormData({ ...nodeFormData, type: e.target.value as NetworkNode['type'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="switch">스위치</option>
+                  <option value="router">라우터</option>
+                  <option value="host">호스트</option>
+                  <option value="controller">컨트롤러</option>
+                  <option value="firewall">방화벽</option>
+                  <option value="vtep">VTEP</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">이름</label>
+                <input
+                  type="text"
+                  value={nodeFormData.label}
+                  onChange={(e) => setNodeFormData({ ...nodeFormData, label: e.target.value })}
+                  placeholder="노드 이름"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">상태</label>
+                <select
+                  value={nodeFormData.status}
+                  onChange={(e) => setNodeFormData({ ...nodeFormData, status: e.target.value as NetworkNode['status'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="warning">Warning</option>
+                  <option value="error">Error</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IP 주소</label>
+                <input
+                  type="text"
+                  value={nodeFormData.ip || ''}
+                  onChange={(e) => setNodeFormData({ ...nodeFormData, ip: e.target.value })}
+                  placeholder="192.168.1.1"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VLAN</label>
+                <select
+                  value={nodeFormData.vlan || ''}
+                  onChange={(e) => setNodeFormData({ ...nodeFormData, vlan: e.target.value ? Number(e.target.value) : undefined })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">선택 안함</option>
+                  {VLAN_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="ghost" type="button" onClick={() => setShowNodeModal(false)}>취소</Button>
+                <Button variant="primary" type="submit">{editingNode ? '저장' : '추가'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 링크 편집 모달 */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowLinkModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingLink ? '연결 편집' : '연결 추가'}
+              </h2>
+              <button
+                onClick={() => setShowLinkModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editingLink) {
+                  editor.updateLink(editingLink.id, linkFormData);
+                } else {
+                  editor.addLink(linkFormData);
+                }
+                setShowLinkModal(false);
+                setEditorMode('view');
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">소스 노드</label>
+                <select
+                  value={linkFormData.source || ''}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, source: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  required
+                >
+                  <option value="">선택하세요</option>
+                  {currentData?.nodes.map((node) => (
+                    <option key={node.id} value={node.id}>{node.label} ({node.type})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">타겟 노드</label>
+                <select
+                  value={linkFormData.target || ''}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, target: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  required
+                >
+                  <option value="">선택하세요</option>
+                  {currentData?.nodes.filter((n) => n.id !== linkFormData.source).map((node) => (
+                    <option key={node.id} value={node.id}>{node.label} ({node.type})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">연결 타입</label>
+                <select
+                  value={linkFormData.type}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, type: e.target.value as NetworkLink['type'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="ethernet">Ethernet</option>
+                  <option value="optical">Optical</option>
+                  <option value="wireless">Wireless</option>
+                  <option value="vxlan">VxLAN Tunnel</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">대역폭</label>
+                <select
+                  value={linkFormData.bandwidth}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, bandwidth: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value={100}>100 Mbps</option>
+                  <option value={1000}>1 Gbps</option>
+                  <option value={10000}>10 Gbps</option>
+                  <option value={25000}>25 Gbps</option>
+                  <option value={40000}>40 Gbps</option>
+                  <option value={100000}>100 Gbps</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">상태</label>
+                <select
+                  value={linkFormData.status}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, status: e.target.value as NetworkLink['status'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="active">Active</option>
+                  <option value="congested">Congested</option>
+                  <option value="down">Down</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="ghost" type="button" onClick={() => setShowLinkModal(false)}>취소</Button>
+                <Button variant="primary" type="submit">{editingLink ? '저장' : '추가'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

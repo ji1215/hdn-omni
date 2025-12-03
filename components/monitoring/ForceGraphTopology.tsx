@@ -56,6 +56,9 @@ interface ForceGraphTopologyProps {
   data?: TopologyData;
   viewMode?: TopologyViewMode;
   onViewModeChange?: (mode: TopologyViewMode) => void;
+  onNodeClick?: (node: NetworkNode) => void;
+  onLinkClick?: (link: NetworkLink) => void;
+  editable?: boolean;
 }
 
 // VLAN 색상 매핑
@@ -90,7 +93,7 @@ const TYPE_COLORS: Record<string, { light: string; dark: string }> = {
   firewall: { light: '#FB923C', dark: '#EA580C' },
 };
 
-export function ForceGraphTopology({ className, data, viewMode = 'physical', onViewModeChange }: ForceGraphTopologyProps) {
+export function ForceGraphTopology({ className, data, viewMode = 'physical', onViewModeChange, onNodeClick, onLinkClick, editable = false }: ForceGraphTopologyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);

@@ -1,9 +1,9 @@
-import { TopologyData, NetworkNode, NetworkLink, DeviceRole } from '@/types/topology';
+import { TopologyData, NetworkNode, NetworkLink, DeviceRole, VxlanTunnel } from '@/types/topology';
 
 // Spine-Leaf 아키텍처 기반 모킹 데이터 생성 함수
 export function generateMockTopologyData(): TopologyData {
   const nodes: NetworkNode[] = [
-    // Spine 스위치 (최상위 계층)
+    // Spine 스위치 (최상위 계층) - VTEP 지원
     {
       id: 'spine-1',
       type: 'switch',
@@ -12,6 +12,8 @@ export function generateMockTopologyData(): TopologyData {
       role: 'spine' as DeviceRole,
       ip: '10.0.116.51',
       mac: 'AA:BB:CC:DD:EE:01',
+      vxlanVni: 5000, // VxLAN VNI
+      vtepIp: '10.0.116.51', // VTEP IP
       bandwidth: 40000,
       bandwidthLabel: '40G',
       layer: 1,
@@ -25,6 +27,8 @@ export function generateMockTopologyData(): TopologyData {
       role: 'spine' as DeviceRole,
       ip: '10.0.116.52',
       mac: 'AA:BB:CC:DD:EE:02',
+      vxlanVni: 5000, // VxLAN VNI
+      vtepIp: '10.0.116.52', // VTEP IP
       bandwidth: 40000,
       bandwidthLabel: '40G',
       layer: 1,
@@ -38,6 +42,8 @@ export function generateMockTopologyData(): TopologyData {
       role: 'spine' as DeviceRole,
       ip: '10.0.116.53',
       mac: 'AA:BB:CC:DD:EE:03',
+      vxlanVni: 5000, // VxLAN VNI
+      vtepIp: '10.0.116.53', // VTEP IP
       bandwidth: 40000,
       bandwidthLabel: '40G',
       layer: 1,
@@ -53,6 +59,8 @@ export function generateMockTopologyData(): TopologyData {
       ip: '10.0.116.61',
       mac: 'AA:BB:CC:DD:EE:11',
       vlan: 100,
+      vxlanVni: 5100, // VxLAN VNI
+      vtepIp: '10.0.116.61', // VTEP IP
       bandwidth: 10000,
       bandwidthLabel: '10G',
       layer: 2,
@@ -82,6 +90,8 @@ export function generateMockTopologyData(): TopologyData {
       ip: '10.0.116.52',
       mac: 'AA:BB:CC:DD:EE:13',
       vlan: 200,
+      vxlanVni: 5200, // VxLAN VNI
+      vtepIp: '10.0.116.52', // VTEP IP
       bandwidth: 10000,
       bandwidthLabel: '10G',
       layer: 2,
@@ -97,6 +107,8 @@ export function generateMockTopologyData(): TopologyData {
       ip: '10.0.116.56',
       mac: 'AA:BB:CC:DD:EE:14',
       vlan: 200,
+      vxlanVni: 5200, // VxLAN VNI
+      vtepIp: '10.0.116.56', // VTEP IP
       bandwidth: 10000,
       bandwidthLabel: '10G',
       layer: 2,
@@ -365,7 +377,7 @@ export function generateMockTopologyData(): TopologyData {
   ];
 
   const links: NetworkLink[] = [
-    // Spine 간 연결 (40G)
+    // Spine 간 연결 (40G) - VxLAN 터널 사용
     {
       id: 'link-spine-1-2',
       source: 'spine-1',
@@ -373,7 +385,9 @@ export function generateMockTopologyData(): TopologyData {
       bandwidth: 40000,
       utilization: 35,
       status: 'active',
-      type: 'optical',
+      type: 'vxlan', // VxLAN 터널
+      isVxlanTunnel: true,
+      vxlanVni: 5000,
       latency: 0.3,
       packetLoss: 0,
     },
@@ -384,7 +398,9 @@ export function generateMockTopologyData(): TopologyData {
       bandwidth: 40000,
       utilization: 42,
       status: 'active',
-      type: 'optical',
+      type: 'vxlan', // VxLAN 터널
+      isVxlanTunnel: true,
+      vxlanVni: 5000,
       latency: 0.3,
       packetLoss: 0,
     },
@@ -743,9 +759,84 @@ export function generateMockTopologyData(): TopologyData {
       latency: 1.5,
       packetLoss: 0,
     },
+    // Leaf 간 VxLAN 터널 (크로스 연결)
+    {
+      id: 'link-leaf1-leaf3-vxlan',
+      source: 'leaf-1',
+      target: 'leaf-3',
+      bandwidth: 10000,
+      utilization: 25,
+      status: 'active',
+      type: 'vxlan', // VxLAN 터널
+      isVxlanTunnel: true,
+      vxlanVni: 5100,
+      latency: 0.8,
+      packetLoss: 0,
+    },
+    {
+      id: 'link-leaf3-leaf4-vxlan',
+      source: 'leaf-3',
+      target: 'leaf-4',
+      bandwidth: 10000,
+      utilization: 30,
+      status: 'active',
+      type: 'vxlan', // VxLAN 터널
+      isVxlanTunnel: true,
+      vxlanVni: 5200,
+      latency: 0.8,
+      packetLoss: 0,
+    },
   ];
 
-  return { nodes, links };
+  // VxLAN 터널 정의
+  const vxlanTunnels: VxlanTunnel[] = [
+    {
+      id: 'vxlan-spine-1-2',
+      vni: 5000,
+      sourceVtep: '10.0.116.51',
+      destVtep: '10.0.116.52',
+      sourceNodeId: 'spine-1',
+      destNodeId: 'spine-2',
+      status: 'active',
+      encapsulation: 'vxlan',
+      mtu: 9000,
+    },
+    {
+      id: 'vxlan-spine-2-3',
+      vni: 5000,
+      sourceVtep: '10.0.116.52',
+      destVtep: '10.0.116.53',
+      sourceNodeId: 'spine-2',
+      destNodeId: 'spine-3',
+      status: 'active',
+      encapsulation: 'vxlan',
+      mtu: 9000,
+    },
+    {
+      id: 'vxlan-leaf-1-3',
+      vni: 5100,
+      sourceVtep: '10.0.116.61',
+      destVtep: '10.0.116.52',
+      sourceNodeId: 'leaf-1',
+      destNodeId: 'leaf-3',
+      status: 'active',
+      encapsulation: 'vxlan',
+      mtu: 9000,
+    },
+    {
+      id: 'vxlan-leaf-3-4',
+      vni: 5200,
+      sourceVtep: '10.0.116.52',
+      destVtep: '10.0.116.56',
+      sourceNodeId: 'leaf-3',
+      destNodeId: 'leaf-4',
+      status: 'active',
+      encapsulation: 'vxlan',
+      mtu: 9000,
+    },
+  ];
+
+  return { nodes, links, vxlanTunnels };
 }
 
 // 동적 데이터 업데이트 시뮬레이션
@@ -781,5 +872,6 @@ export function updateTopologyData(data: TopologyData): TopologyData {
   return {
     nodes: updatedNodes,
     links: updatedLinks,
+    vxlanTunnels: data.vxlanTunnels, // VxLAN 터널은 그대로 유지
   };
 }

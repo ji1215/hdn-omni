@@ -24,10 +24,10 @@ export default function TopologyPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              토폴로지
+              토폴로지 에디터
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              네트워크 토폴로지를 시각화하고 관리합니다
+              네트워크 토폴로지를 시각화하고 편집합니다. 각 탭에서 노드 추가/삭제, 연결 편집, VxLAN/VLAN 설정이 가능합니다.
             </p>
           </div>
 
@@ -70,7 +70,7 @@ export default function TopologyPage() {
             </p>
           ) : (
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>논리적 뷰:</strong> VLAN을 기준으로 네트워크를 논리적으로 그룹화하여 보여줍니다.
+              <strong>논리적 뷰:</strong> VLAN/VxLAN을 기준으로 네트워크를 논리적으로 그룹화하여 보여줍니다.
               동일한 VLAN에 속한 장비들이 같은 색상으로 표시됩니다.
             </p>
           )}
@@ -134,6 +134,7 @@ export default function TopologyPage() {
               className="h-full"
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              editable
             />
           </Tabs.Content>
 
@@ -147,6 +148,7 @@ export default function TopologyPage() {
               className="h-full"
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              editable
             />
           </Tabs.Content>
 
@@ -160,6 +162,7 @@ export default function TopologyPage() {
               className="h-full"
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              editable
             />
           </Tabs.Content>
 
@@ -173,6 +176,7 @@ export default function TopologyPage() {
               className="h-full"
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              editable
             />
           </Tabs.Content>
 
@@ -186,6 +190,7 @@ export default function TopologyPage() {
               className="h-full"
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              editable
             />
           </Tabs.Content>
 

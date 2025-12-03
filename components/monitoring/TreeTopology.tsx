@@ -26,6 +26,8 @@ interface TreeTopologyProps {
   data?: TopologyData;
   viewMode?: TopologyViewMode;
   onViewModeChange?: (mode: TopologyViewMode) => void;
+  onNodeClick?: (node: NetworkNode) => void;
+  editable?: boolean;
 }
 
 // VLAN 색상 매핑
@@ -236,7 +238,7 @@ function buildLogicalTree(data: TopologyData): TreeNode {
   return rootNode;
 }
 
-export function TreeTopology({ className, data, viewMode = 'physical', onViewModeChange }: TreeTopologyProps) {
+export function TreeTopology({ className, data, viewMode = 'physical', onViewModeChange, onNodeClick, editable = false }: TreeTopologyProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);

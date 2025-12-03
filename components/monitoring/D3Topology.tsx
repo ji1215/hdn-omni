@@ -39,6 +39,9 @@ interface D3TopologyProps {
   data?: TopologyData;
   viewMode?: TopologyViewMode;
   onViewModeChange?: (mode: TopologyViewMode) => void;
+  onNodeClick?: (node: NetworkNode) => void;
+  onLinkClick?: (link: NetworkLink) => void;
+  editable?: boolean;
 }
 
 // VLAN 색상 매핑
@@ -63,7 +66,7 @@ const STATUS_COLORS = {
   down: '#EF4444',
 };
 
-export function D3Topology({ className, data, viewMode = 'physical', onViewModeChange }: D3TopologyProps) {
+export function D3Topology({ className, data, viewMode = 'physical', onViewModeChange, onNodeClick, onLinkClick, editable = false }: D3TopologyProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
