@@ -1,18 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import CytoscapeComponent from 'react-cytoscapejs';
-import cytoscape, { Core } from 'cytoscape';
+import { Network, Options, Node, Edge, Data } from 'vis-network';
+import { DataSet } from 'vis-data';
 import {
   NetworkNode,
   NetworkLink,
   TopologyData,
-  TopologyLayoutType,
-  TopologyViewOptions,
   TopologyViewMode,
-  CytoscapeElement,
-  CytoscapeNode,
-  CytoscapeEdge,
+  TopologyViewOptions,
   VlanColorConfig,
   ProvisioningConfig,
 } from '@/types/topology';
@@ -21,15 +17,10 @@ import {
   ZoomOut,
   Maximize2,
   Layout,
-  RefreshCw,
-  Info,
-  Activity,
-  Settings,
   Layers,
-  Network,
+  Network as NetworkIcon,
   Plus,
   X,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { cn } from '@/lib/utils';
@@ -54,238 +45,13 @@ const getVlanColor = (vlanId: number | undefined): string => {
   return config?.color || '#6B7280';
 };
 
-// Cytoscape 테마 스타일 정의 (라이트/다크 모드 지원)
-const createCytoscapeStylesheet = (viewMode: TopologyViewMode, isDarkMode: boolean): any => {
-  // 테마별 색상 정의
-  const colors = isDarkMode ? {
-    nodeBg: '#374151',
-    nodeSpineBg: '#1F2937',
-    nodeGroupBg: '#111827',
-    nodeBorder: '#4B5563',
-    nodeSpineBorder: '#6B7280',
-    text: '#E5E7EB',
-    edgeLine: '#4B5563',
-    edgeText: '#9CA3AF',
-    edgeTextBg: '#111827',
-  } : {
-    nodeBg: '#F3F4F6',
-    nodeSpineBg: '#E5E7EB',
-    nodeGroupBg: '#FFFFFF',
-    nodeBorder: '#9CA3AF',
-    nodeSpineBorder: '#6B7280',
-    text: '#374151',
-    edgeLine: '#9CA3AF',
-    edgeText: '#6B7280',
-    edgeTextBg: '#FFFFFF',
-  };
-
-  return [
-    // 노드 기본 스타일 - SVG 아이콘 사용
-    {
-      selector: 'node',
-      style: {
-        'background-color': 'transparent',
-        'background-opacity': 1,
-        'background-image': 'data(iconUrl)',
-        'background-fit': 'contain',
-        'background-clip': 'none',
-        'label': 'data(label)',
-        'text-valign': 'bottom',
-        'text-halign': 'center',
-        'font-size': '11px',
-        'font-weight': 'bold',
-        'color': colors.text,
-        'text-outline-width': 0,
-        'text-margin-y': 8,
-        'width': 60,
-        'height': 45,
-        'shape': 'rectangle',
-        'border-width': 0,
-      },
-    },
-    // Spine 노드 (상위 계층)
-    {
-      selector: 'node[role="spine"]',
-      style: {
-        'width': 70,
-        'height': 50,
-      },
-    },
-    // Leaf 노드
-    {
-      selector: 'node[role="leaf"]',
-      style: {
-        'width': 65,
-        'height': 48,
-      },
-    },
-    // 그룹 노드 (하위 계층)
-    {
-      selector: 'node[type="group"]',
-      style: {
-        'width': 50,
-        'height': 35,
-      },
-    },
-    // 스위치 노드
-    {
-      selector: 'node[type="switch"]',
-      style: {
-        'width': 60,
-        'height': 45,
-      },
-    },
-    // 라우터 노드
-    {
-      selector: 'node[type="router"]',
-      style: {
-        'width': 55,
-        'height': 48,
-      },
-    },
-    // 호스트 노드
-    {
-      selector: 'node[type="host"]',
-      style: {
-        'width': 45,
-        'height': 55,
-      },
-    },
-    // 컨트롤러 노드
-    {
-      selector: 'node[type="controller"]',
-      style: {
-        'width': 60,
-        'height': 60,
-      },
-    },
-    // 상태별 스타일 - 활성
-    {
-      selector: 'node[status="active"]',
-      style: {
-        'opacity': 1,
-      },
-    },
-    // 상태별 스타일 - 비활성
-    {
-      selector: 'node[status="inactive"]',
-      style: {
-        'opacity': 0.5,
-      },
-    },
-    // 상태별 스타일 - 경고 (Minor)
-    {
-      selector: 'node[status="warning"]',
-      style: {
-        'opacity': 1,
-      },
-    },
-    // 상태별 스타일 - 오류 (Error)
-    {
-      selector: 'node[status="error"]',
-      style: {
-        'opacity': 1,
-      },
-    },
-    // 논리적 뷰에서 VLAN 색상 적용
-    ...(viewMode === 'logical' ? [
-      {
-        selector: 'node[vlan = 100], node[vlan = 101]',
-        style: { 'border-color': '#EF4444' },
-      },
-      {
-        selector: 'node[vlan = 200], node[vlan = 201]',
-        style: { 'border-color': '#F97316' },
-      },
-      {
-        selector: 'node[vlan = 300], node[vlan = 301]',
-        style: { 'border-color': '#22C55E' },
-      },
-      {
-        selector: 'node[vlan = 400], node[vlan = 401]',
-        style: { 'border-color': '#8B5CF6' },
-      },
-    ] : []),
-    // 엣지 기본 스타일
-    {
-      selector: 'edge',
-      style: {
-        'width': 2,
-        'line-color': colors.edgeLine,
-        'curve-style': 'bezier',
-        'label': 'data(bandwidthLabel)',
-        'font-size': '10px',
-        'color': colors.edgeText,
-        'text-rotation': 'autorotate',
-        'text-background-opacity': 0.8,
-        'text-background-color': colors.edgeTextBg,
-        'text-background-padding': '3px',
-        'text-background-shape': 'roundrectangle',
-      },
-    },
-    // 활성 링크
-    {
-      selector: 'edge[status="active"]',
-      style: {
-        'line-color': colors.edgeLine,
-      },
-    },
-    // 혼잡 링크
-    {
-      selector: 'edge[status="congested"]',
-      style: {
-        'line-color': '#F59E0B',
-        'width': 3,
-      },
-    },
-    // 다운된 링크
-    {
-      selector: 'edge[status="down"]',
-      style: {
-        'line-color': '#EF4444',
-        'line-style': 'dashed',
-        'width': 2,
-      },
-    },
-    // 논리적 뷰에서 VLAN별 엣지 색상
-    ...(viewMode === 'logical' ? [
-      {
-        selector: 'edge[vlan = 100], edge[vlan = 101]',
-        style: { 'line-color': '#EF4444' },
-      },
-      {
-        selector: 'edge[vlan = 200], edge[vlan = 201]',
-        style: { 'line-color': '#F97316' },
-      },
-      {
-        selector: 'edge[vlan = 300], edge[vlan = 301]',
-        style: { 'line-color': '#22C55E' },
-      },
-      {
-        selector: 'edge[vlan = 400], edge[vlan = 401]',
-        style: { 'line-color': '#8B5CF6' },
-      },
-    ] : []),
-    // 선택된 요소
-    {
-      selector: ':selected',
-      style: {
-        'border-color': '#3B82F6',
-        'border-width': 3,
-        'line-color': '#3B82F6',
-      },
-    },
-  ];
-};
-
-// 레이아웃 옵션 (Cytoscape 유효한 레이아웃 이름 사용)
-const layoutOptions: TopologyLayoutType[] = [
+// 레이아웃 옵션
+type LayoutType = 'hierarchical' | 'force' | 'radial' | 'grid';
+const layoutOptions: { name: LayoutType; label: string }[] = [
   { name: 'hierarchical', label: '계층형' },
-  { name: 'circle', label: '원형' },
-  { name: 'cose', label: '포스' },
+  { name: 'force', label: '포스' },
+  { name: 'radial', label: '방사형' },
   { name: 'grid', label: '그리드' },
-  { name: 'concentric', label: '동심원' },
-  { name: 'breadthfirst', label: '너비 우선' },
 ];
 
 // 새로고침 간격 옵션
@@ -296,7 +62,7 @@ const refreshIntervalOptions: { value: number; label: string }[] = [
   { value: 60, label: '1분' },
 ];
 
-interface NetworkTopologyProps {
+interface VisTopologyProps {
   data?: TopologyData;
   className?: string;
   viewMode?: TopologyViewMode;
@@ -305,23 +71,20 @@ interface NetworkTopologyProps {
   onLinkClick?: (link: NetworkLink) => void;
 }
 
-export function NetworkTopology({
+export function VisTopology({
   data,
   className,
   viewMode: externalViewMode,
   onViewModeChange,
   onNodeClick,
   onLinkClick,
-}: NetworkTopologyProps) {
-  const cyRef = useRef<Core | null>(null);
-  const layoutRunningRef = useRef<boolean>(false); // 레이아웃 실행 중 여부
-  const layoutDebounceRef = useRef<NodeJS.Timeout | null>(null); // 디바운스 타이머
-  const onNodeClickRef = useRef(onNodeClick);
-  const onLinkClickRef = useRef(onLinkClick);
+}: VisTopologyProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const networkRef = useRef<Network | null>(null);
+  const nodesDataSetRef = useRef<DataSet<Node> | null>(null);
+  const edgesDataSetRef = useRef<DataSet<Edge> | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [selectedLayout, setSelectedLayout] = useState<TopologyLayoutType>(
-    layoutOptions[0] // 기본값: 계층형
-  );
+  const [selectedLayout, setSelectedLayout] = useState<LayoutType>('hierarchical');
   const [viewOptions, setViewOptions] = useState<TopologyViewOptions>({
     showLabels: true,
     showUtilization: true,
@@ -335,9 +98,9 @@ export function NetworkTopology({
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [selectedLink, setSelectedLink] = useState<NetworkLink | null>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number; direction: 'up' | 'down' } | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const [showProvisioningPanel, setShowProvisioningPanel] = useState(false);
-  const [provisioningConfigs, setProvisioningConfigs] = useState<ProvisioningConfig[]>([
+  const [provisioningConfigs] = useState<ProvisioningConfig[]>([
     {
       type: 'vlan',
       name: 'VLAN 100 생성',
@@ -372,7 +135,7 @@ export function NetworkTopology({
     if (externalViewMode && externalViewMode !== viewOptions.viewMode) {
       setViewOptions(prev => ({ ...prev, viewMode: externalViewMode }));
     }
-  }, [externalViewMode]);
+  }, [externalViewMode, viewOptions.viewMode]);
 
   // 대역폭 라벨 생성
   const getBandwidthLabel = (bandwidth: number): string => {
@@ -383,272 +146,460 @@ export function NetworkTopology({
     return `${bandwidth}M`;
   };
 
-  // 데이터를 Cytoscape 형식으로 변환
-  const transformData = useCallback((): CytoscapeElement[] => {
-    if (!data) return [];
+  // 노드 모양 결정
+  const getNodeShape = (node: NetworkNode): string => {
+    switch (node.type) {
+      case 'router':
+        return 'box';
+      case 'switch':
+        return 'hexagon';
+      case 'host':
+        return 'dot';
+      case 'controller':
+        return 'diamond';
+      case 'firewall':
+        return 'triangle';
+      case 'group':
+        return 'ellipse';
+      default:
+        return 'dot';
+    }
+  };
 
-    const nodes: CytoscapeNode[] = data.nodes.map(node => {
-      // 상태에 따른 테두리 색상
-      const statusColors: Record<string, string> = {
-        active: '#22C55E',
-        warning: '#F59E0B',
-        error: '#EF4444',
-        inactive: '#6B7280',
-      };
-      const borderColor = statusColors[node.status] || '#6B7280';
+  // 노드 색상 결정
+  const getNodeColor = (node: NetworkNode, viewMode: TopologyViewMode): { background: string; border: string } => {
+    const baseColors = isDarkMode
+      ? { background: '#374151', border: '#4B5563' }
+      : { background: '#F3F4F6', border: '#9CA3AF' };
 
-      // 타입/역할에 따른 배경색
-      const getBgColor = () => {
-        if (isDarkMode) {
-          if (node.type === 'controller') return '#F59E0B';
-          if (node.type === 'switch' || node.role === 'spine' || node.role === 'leaf') return '#3B82F6';
-          if (node.type === 'router') return '#8B5CF6';
-          if (node.type === 'host') return '#10B981';
-          if (node.type === 'group') return '#6366F1';
-          return '#374151';
-        } else {
-          if (node.type === 'controller') return '#FCD34D';
-          if (node.type === 'switch' || node.role === 'spine' || node.role === 'leaf') return '#60A5FA';
-          if (node.type === 'router') return '#A78BFA';
-          if (node.type === 'host') return '#34D399';
-          if (node.type === 'group') return '#818CF8';
-          return '#F3F4F6';
-        }
-      };
+    // 논리적 뷰에서는 VLAN 색상 적용
+    if (viewMode === 'logical' && node.vlan) {
+      const vlanColor = getVlanColor(node.vlan);
+      return { background: baseColors.background, border: vlanColor };
+    }
 
-      const iconUrl = getNetworkIconSvg(node.type, node.role, getBgColor(), borderColor, isDarkMode);
+    // 상태별 색상
+    switch (node.status) {
+      case 'active':
+        return { background: baseColors.background, border: '#22C55E' };
+      case 'warning':
+        return { background: baseColors.background, border: '#F59E0B' };
+      case 'error':
+        return { background: baseColors.background, border: '#EF4444' };
+      case 'inactive':
+        return { background: baseColors.background, border: '#6B7280' };
+      default:
+        return baseColors;
+    }
+  };
+
+  // 노드 크기 결정
+  const getNodeSize = (node: NetworkNode): number => {
+    switch (node.role) {
+      case 'spine':
+        return 35;
+      case 'leaf':
+        return 30;
+      case 'access':
+        return 25;
+      default:
+        return 20;
+    }
+  };
+
+  // 엣지 색상 결정
+  const getEdgeColor = (link: NetworkLink, viewMode: TopologyViewMode, sourceVlan?: number): string => {
+    // 논리적 뷰에서는 VLAN 색상 적용
+    if (viewMode === 'logical' && sourceVlan) {
+      return getVlanColor(sourceVlan);
+    }
+
+    switch (link.status) {
+      case 'active':
+        return isDarkMode ? '#4B5563' : '#9CA3AF';
+      case 'congested':
+        return '#F59E0B';
+      case 'down':
+        return '#EF4444';
+      default:
+        return isDarkMode ? '#4B5563' : '#9CA3AF';
+    }
+  };
+
+  // vis.js 네트워크 옵션 생성
+  const createNetworkOptions = useCallback((layout: LayoutType): Options => {
+    const baseOptions: Options = {
+      nodes: {
+        font: {
+          color: isDarkMode ? '#E5E7EB' : '#374151',
+          size: 12,
+        },
+        borderWidth: 2,
+        borderWidthSelected: 3,
+      },
+      edges: {
+        width: 2,
+        font: {
+          color: isDarkMode ? '#9CA3AF' : '#6B7280',
+          size: 10,
+          strokeWidth: 0,
+          background: isDarkMode ? '#111827' : '#FFFFFF',
+        },
+        smooth: {
+          enabled: true,
+          type: 'dynamic',
+          roundness: 0.5,
+        },
+        color: {
+          inherit: false,
+        },
+      },
+      physics: {
+        enabled: layout === 'force',
+        stabilization: {
+          enabled: true,
+          iterations: 200,
+        },
+        barnesHut: {
+          gravitationalConstant: -3000,
+          centralGravity: 0.3,
+          springLength: 120,
+          springConstant: 0.04,
+        },
+      },
+      interaction: {
+        hover: true,
+        tooltipDelay: 200,
+        hideEdgesOnDrag: true,
+        hideEdgesOnZoom: true,
+      },
+      layout: {
+        improvedLayout: true,
+      },
+    };
+
+    // 레이아웃별 설정
+    switch (layout) {
+      case 'hierarchical':
+        return {
+          ...baseOptions,
+          layout: {
+            hierarchical: {
+              enabled: true,
+              direction: 'UD',
+              sortMethod: 'directed',
+              nodeSpacing: 150,
+              levelSeparation: 150,
+              treeSpacing: 200,
+              blockShifting: true,
+              edgeMinimization: true,
+              parentCentralization: true,
+            },
+          },
+          physics: { enabled: false },
+        };
+      case 'force':
+        return {
+          ...baseOptions,
+          layout: { hierarchical: { enabled: false } },
+          physics: {
+            enabled: true,
+            stabilization: {
+              enabled: true,
+              iterations: 300,
+            },
+            barnesHut: {
+              gravitationalConstant: -4000,
+              centralGravity: 0.3,
+              springLength: 150,
+              springConstant: 0.04,
+              damping: 0.09,
+            },
+          },
+        };
+      case 'radial':
+        return {
+          ...baseOptions,
+          layout: {
+            hierarchical: {
+              enabled: true,
+              direction: 'UD',
+              sortMethod: 'hubsize',
+              nodeSpacing: 200,
+              levelSeparation: 200,
+            },
+          },
+          physics: { enabled: false },
+        };
+      case 'grid':
+        return {
+          ...baseOptions,
+          layout: { hierarchical: { enabled: false } },
+          physics: { enabled: false },
+        };
+      default:
+        return baseOptions;
+    }
+  }, [isDarkMode]);
+
+  // 데이터를 vis.js 형식으로 변환
+  const transformData = useCallback((): Data => {
+    if (!data) return { nodes: [], edges: [] };
+
+    const nodes: Node[] = data.nodes.map(node => {
+      const colors = getNodeColor(node, viewOptions.viewMode);
+      const iconUrl = getNetworkIconSvg(node.type, node.role, colors.background, colors.border, isDarkMode);
 
       return {
-        data: {
-          id: node.id,
-          label: viewOptions.showLabels ? node.label : '',
-          type: node.type,
-          status: node.status,
-          role: node.role,
-          ip: node.ip,
-          mac: node.mac,
-          vlan: node.vlan,
-          bandwidth: node.bandwidth,
-          bandwidthLabel: node.bandwidthLabel || (node.bandwidth ? getBandwidthLabel(node.bandwidth) : ''),
-          cpu: node.cpu,
-          memory: node.memory,
-          layer: node.layer,
-          iconUrl,
+        id: node.id,
+        label: viewOptions.showLabels ? node.label : '',
+        shape: 'image',
+        image: iconUrl,
+        size: getNodeSize(node) + 10,
+        font: {
+          color: isDarkMode ? '#E5E7EB' : '#374151',
+          size: 12,
+          bold: { color: isDarkMode ? '#E5E7EB' : '#374151' },
         },
-        position: node.position,
-        classes: `node-${node.type} node-status-${node.status} ${node.role ? `node-role-${node.role}` : ''}`,
-      };
+        title: `${node.label}\nType: ${node.type}\nStatus: ${node.status}${node.ip ? `\nIP: ${node.ip}` : ''}${node.vlan ? `\nVLAN: ${node.vlan}` : ''}`,
+        level: node.layer,
+        // 커스텀 데이터 저장
+        nodeData: node,
+      } as Node;
     });
 
-    const edges: CytoscapeEdge[] = data.links.map(link => {
+    const edges: Edge[] = data.links.map(link => {
+      const sourceNode = data.nodes.find(n => n.id === link.source);
+      const edgeColor = getEdgeColor(link, viewOptions.viewMode, sourceNode?.vlan);
       const bandwidthLabel = viewOptions.showBandwidth ? getBandwidthLabel(link.bandwidth) : '';
 
-      // 소스 노드의 VLAN 가져오기
-      const sourceNode = data.nodes.find(n => n.id === link.source);
-      const vlan = sourceNode?.vlan;
-
       return {
-        data: {
-          id: link.id,
-          source: link.source,
-          target: link.target,
-          bandwidth: bandwidthLabel, // string으로 변환
-          bandwidthLabel,
-          utilization: link.utilization,
-          status: link.status,
-          type: link.type,
-          latency: link.latency,
-          packetLoss: link.packetLoss,
-          vlan,
+        id: link.id,
+        from: link.source,
+        to: link.target,
+        label: bandwidthLabel,
+        color: {
+          color: edgeColor,
+          highlight: '#3B82F6',
+          hover: '#3B82F6',
         },
-        classes: `edge-${link.type} edge-status-${link.status}`,
-      };
+        dashes: link.status === 'down',
+        width: link.status === 'congested' ? 3 : 2,
+        title: `Bandwidth: ${getBandwidthLabel(link.bandwidth)}\nUtilization: ${link.utilization.toFixed(1)}%\nStatus: ${link.status}${link.latency ? `\nLatency: ${link.latency.toFixed(1)}ms` : ''}`,
+        // 커스텀 데이터 저장
+        linkData: link,
+      } as Edge;
     });
 
-    return [...nodes, ...edges];
-  }, [data, viewOptions]);
+    return { nodes, edges };
+  }, [data, viewOptions, isDarkMode]);
 
-  // 레이아웃 변경 (디바운스 적용)
-  const changeLayout = useCallback((layout: TopologyLayoutType) => {
-    // 레이아웃 실행 중이면 무시
-    if (layoutRunningRef.current) {
-      return;
-    }
+  // 네트워크 초기화
+  useEffect(() => {
+    if (!containerRef.current || !data) return;
 
-    const cy = cyRef.current;
-    if (!cy) return;
+    const transformedData = transformData();
 
-    // 노드가 없으면 실행하지 않음
-    if (cy.nodes().length === 0) return;
+    // DataSet 생성
+    nodesDataSetRef.current = new DataSet(transformedData.nodes as Node[]);
+    edgesDataSetRef.current = new DataSet(transformedData.edges as Edge[]);
 
-    // 같은 레이아웃을 다시 클릭한 경우 무시 (중복 실행 방지)
-    if (selectedLayout.name === layout.name) {
-      return;
-    }
+    const networkData: Data = {
+      nodes: nodesDataSetRef.current,
+      edges: edgesDataSetRef.current,
+    };
 
-    // 디바운스: 이전 타이머 취소
-    if (layoutDebounceRef.current) {
-      clearTimeout(layoutDebounceRef.current);
-      layoutDebounceRef.current = null;
-    }
+    const options = createNetworkOptions(selectedLayout);
 
-    // 선택 상태 즉시 업데이트 (UI 반응성)
-    setSelectedLayout(layout);
+    // 네트워크 생성
+    networkRef.current = new Network(containerRef.current, networkData, options);
 
-    // 디바운스 적용 (300ms)
-    layoutDebounceRef.current = setTimeout(() => {
-      layoutDebounceRef.current = null;
+    // 이벤트 리스너
+    networkRef.current.on('click', (params) => {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const node = data.nodes.find(n => n.id === nodeId);
+        if (node && networkRef.current && containerRef.current) {
+          // 노드의 캔버스 좌표를 DOM 좌표로 변환
+          const positions = networkRef.current.getPositions([nodeId]);
+          const canvasPos = positions[nodeId];
+          const domPos = networkRef.current.canvasToDOM({ x: canvasPos.x, y: canvasPos.y });
 
-      const currentCy = cyRef.current;
-      if (!currentCy || currentCy.nodes().length === 0) return;
+          // 컨테이너 경계 계산
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const popupWidth = 320; // 팝업 예상 너비
+          const popupHeight = 300; // 팝업 예상 높이
+          const padding = 20; // 여백
+          const toolbarHeight = 48; // 상단 툴바 높이
 
-      // 레이아웃 실행 중 플래그 설정
-      layoutRunningRef.current = true;
+          // X 좌표 조정 (좌우 경계 체크)
+          let popupX = domPos.x;
+          if (popupX - popupWidth / 2 < padding) {
+            popupX = popupWidth / 2 + padding;
+          } else if (popupX + popupWidth / 2 > containerRect.width - padding) {
+            popupX = containerRect.width - popupWidth / 2 - padding;
+          }
 
-      let layoutConfig: any;
+          // Y 좌표 및 방향 결정 (상단 경계 체크)
+          let popupY = domPos.y - 30; // 노드 위쪽에 표시
+          let direction: 'up' | 'down' = 'up';
 
-      switch (layout.name) {
-        case 'hierarchical':
-        case 'breadthfirst':
-          layoutConfig = {
-            name: 'breadthfirst',
-            fit: true,
-            padding: 50,
-            animate: true,
-            animationDuration: 300,
-            directed: true,
-            spacingFactor: 1.75,
-            avoidOverlap: true,
-            nodeDimensionsIncludeLabels: true,
-            grid: false,
-            circle: false,
-          };
-          break;
+          // 상단에 공간이 부족하면 아래쪽에 표시
+          if (domPos.y - popupHeight - 30 < toolbarHeight) {
+            popupY = domPos.y + 50; // 노드 아래쪽에 표시
+            direction = 'down';
+          }
 
-        case 'circle':
-          layoutConfig = {
-            name: 'circle',
-            fit: true,
-            padding: 50,
-            animate: true,
-            animationDuration: 300,
-            avoidOverlap: true,
-            startAngle: 0,
-            sweep: 2 * Math.PI,
-            clockwise: true,
-            spacingFactor: 1.2,
-          };
-          break;
+          setSelectedNode(node);
+          setSelectedLink(null);
+          setPopupPosition({ x: popupX, y: popupY, direction });
+          onNodeClick?.(node);
+        }
+      } else if (params.edges.length > 0) {
+        const edgeId = params.edges[0];
+        const link = data.links.find(l => l.id === edgeId);
+        if (link && networkRef.current && containerRef.current) {
+          // 엣지의 중간점 계산
+          const sourceNode = data.nodes.find(n => n.id === link.source);
+          const targetNode = data.nodes.find(n => n.id === link.target);
+          if (sourceNode && targetNode) {
+            const positions = networkRef.current.getPositions([link.source, link.target]);
+            const midX = (positions[link.source].x + positions[link.target].x) / 2;
+            const midY = (positions[link.source].y + positions[link.target].y) / 2;
+            const domPos = networkRef.current.canvasToDOM({ x: midX, y: midY });
 
-        case 'cose':
-          layoutConfig = {
-            name: 'cose',
-            fit: true,
-            padding: 50,
-            animate: 'end',
-            animationDuration: 300,
-            avoidOverlap: true,
-            nodeRepulsion: function() { return 4500; },
-            idealEdgeLength: function() { return 80; },
-            edgeElasticity: function() { return 45; },
-            numIter: 500,
-            randomize: false,
-            componentSpacing: 100,
-            nodeOverlap: 20,
-            gravity: 0.25,
-          };
-          break;
+            // 컨테이너 경계 계산
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const popupWidth = 320;
+            const popupHeight = 200;
+            const padding = 20;
+            const toolbarHeight = 48;
 
-        case 'concentric':
-          layoutConfig = {
-            name: 'concentric',
-            fit: true,
-            padding: 50,
-            animate: true,
-            animationDuration: 300,
-            avoidOverlap: true,
-            concentric: function(node: any) {
-              const layer = node.data('layer');
-              if (layer === 1) return 4;
-              if (layer === 2) return 3;
-              if (layer === 3) return 2;
-              return 1;
-            },
-            levelWidth: function() { return 1; },
-            minNodeSpacing: 60,
-            spacingFactor: 1.5,
-          };
-          break;
+            // X 좌표 조정
+            let popupX = domPos.x;
+            if (popupX - popupWidth / 2 < padding) {
+              popupX = popupWidth / 2 + padding;
+            } else if (popupX + popupWidth / 2 > containerRect.width - padding) {
+              popupX = containerRect.width - popupWidth / 2 - padding;
+            }
 
-        case 'grid':
-          layoutConfig = {
-            name: 'grid',
-            fit: true,
-            padding: 50,
-            animate: true,
-            animationDuration: 300,
-            avoidOverlap: true,
-            condense: true,
-            spacingFactor: 1.2,
-          };
-          break;
+            // Y 좌표 및 방향 결정
+            let popupY = domPos.y - 30;
+            let direction: 'up' | 'down' = 'up';
 
-        default:
-          layoutConfig = {
-            name: 'grid',
-            fit: true,
-            padding: 50,
-            animate: true,
-            animationDuration: 300,
-          };
+            if (domPos.y - popupHeight - 30 < toolbarHeight) {
+              popupY = domPos.y + 30;
+              direction = 'down';
+            }
+
+            setSelectedLink(link);
+            setSelectedNode(null);
+            setPopupPosition({ x: popupX, y: popupY, direction });
+            onLinkClick?.(link);
+          }
+        }
+      } else {
+        setSelectedNode(null);
+        setSelectedLink(null);
+        setPopupPosition(null);
       }
+    });
 
-      try {
-        const layoutInstance = currentCy.layout(layoutConfig);
+    // 드래그/줌 시 팝업 닫기
+    networkRef.current.on('dragStart', () => {
+      setSelectedNode(null);
+      setSelectedLink(null);
+      setPopupPosition(null);
+    });
 
-        // 레이아웃 완료 이벤트
-        layoutInstance.one('layoutstop', () => {
-          layoutRunningRef.current = false;
-        });
+    networkRef.current.on('zoom', () => {
+      setSelectedNode(null);
+      setSelectedLink(null);
+      setPopupPosition(null);
+    });
 
-        // 레이아웃 시작 전에도 에러 발생 가능성 대비
-        layoutInstance.one('layoutready', () => {
-          // 레이아웃이 준비되었음을 확인
-        });
+    // 그리드 레이아웃일 때 수동 배치
+    if (selectedLayout === 'grid') {
+      const cols = Math.ceil(Math.sqrt(data.nodes.length));
+      const spacing = 150;
+      data.nodes.forEach((node, index) => {
+        const x = (index % cols) * spacing - (cols * spacing) / 2;
+        const y = Math.floor(index / cols) * spacing - ((Math.ceil(data.nodes.length / cols)) * spacing) / 2;
+        networkRef.current?.moveNode(node.id, x, y);
+      });
+      networkRef.current?.fit();
+    }
 
-        layoutInstance.run();
-      } catch (error) {
-        console.error('Layout error:', error);
-        layoutRunningRef.current = false;
-      }
-    }, 300);
-  }, [selectedLayout]);
+    return () => {
+      networkRef.current?.destroy();
+      networkRef.current = null;
+    };
+  }, [data, selectedLayout, createNetworkOptions, transformData, onNodeClick, onLinkClick]);
+
+  // viewMode나 isDarkMode 변경 시 노드/엣지 업데이트
+  useEffect(() => {
+    if (!networkRef.current || !data || !nodesDataSetRef.current || !edgesDataSetRef.current) return;
+
+    // 노드 업데이트
+    const updatedNodes = data.nodes.map(node => {
+      const colors = getNodeColor(node, viewOptions.viewMode);
+      const iconUrl = getNetworkIconSvg(node.type, node.role, colors.background, colors.border, isDarkMode);
+      return {
+        id: node.id,
+        image: iconUrl,
+        font: {
+          color: isDarkMode ? '#E5E7EB' : '#374151',
+        },
+      };
+    });
+    nodesDataSetRef.current.update(updatedNodes);
+
+    // 엣지 업데이트
+    const updatedEdges = data.links.map(link => {
+      const sourceNode = data.nodes.find(n => n.id === link.source);
+      const edgeColor = getEdgeColor(link, viewOptions.viewMode, sourceNode?.vlan);
+      return {
+        id: link.id,
+        color: {
+          color: edgeColor,
+          highlight: '#3B82F6',
+          hover: '#3B82F6',
+        },
+      };
+    });
+    edgesDataSetRef.current.update(updatedEdges);
+  }, [viewOptions.viewMode, isDarkMode, data]);
 
   // 줌 컨트롤
   const handleZoomIn = useCallback(() => {
-    if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 1.2);
+    if (networkRef.current) {
+      const scale = networkRef.current.getScale();
+      networkRef.current.moveTo({ scale: scale * 1.2 });
     }
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+    if (networkRef.current) {
+      const scale = networkRef.current.getScale();
+      networkRef.current.moveTo({ scale: scale * 0.8 });
     }
   }, []);
 
   const handleFit = useCallback(() => {
-    if (cyRef.current) {
-      cyRef.current.fit(undefined, 50);
+    if (networkRef.current) {
+      networkRef.current.fit({ animation: true });
     }
+  }, []);
+
+  // 레이아웃 변경
+  const changeLayout = useCallback((layout: LayoutType) => {
+    setSelectedLayout(layout);
   }, []);
 
   // 뷰 모드 변경
   const handleViewModeChange = useCallback((mode: TopologyViewMode) => {
     setViewOptions(prev => ({ ...prev, viewMode: mode }));
-    if (onViewModeChange) {
-      onViewModeChange(mode);
-    }
+    onViewModeChange?.(mode);
   }, [onViewModeChange]);
 
   // 자동 새로고침 토글
@@ -661,201 +612,14 @@ export function NetworkTopology({
     setViewOptions(prev => ({ ...prev, refreshInterval: interval }));
   }, []);
 
-  // Refs 업데이트
-  useEffect(() => {
-    onNodeClickRef.current = onNodeClick;
-    onLinkClickRef.current = onLinkClick;
-  }, [onNodeClick, onLinkClick]);
-
-  // 이벤트 핸들러 - 의존성을 제거하여 재생성 방지
-  const handleCyReady = useCallback((cy: Core) => {
-    cyRef.current = cy;
-
-    // 노드 클릭 이벤트
-    cy.on('tap', 'node', (event) => {
-      const node = event.target;
-      const nodeData = node.data();
-      const networkNode: NetworkNode = {
-        id: nodeData.id,
-        type: nodeData.type,
-        label: nodeData.label || nodeData.id,
-        status: nodeData.status,
-        role: nodeData.role,
-        ip: nodeData.ip,
-        mac: nodeData.mac,
-        vlan: nodeData.vlan,
-        bandwidth: nodeData.bandwidth,
-        bandwidthLabel: nodeData.bandwidthLabel,
-        layer: nodeData.layer,
-      };
-
-      // 노드 위치 계산
-      if (containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const nodePosition = node.renderedPosition();
-        const popupWidth = 320;
-        const popupHeight = 300;
-        const padding = 20;
-        const toolbarHeight = 48;
-
-        // X 좌표 조정 (좌우 경계 체크)
-        let popupX = nodePosition.x;
-        if (popupX - popupWidth / 2 < padding) {
-          popupX = popupWidth / 2 + padding;
-        } else if (popupX + popupWidth / 2 > containerRect.width - padding) {
-          popupX = containerRect.width - popupWidth / 2 - padding;
-        }
-
-        // Y 좌표 및 방향 결정
-        let popupY = nodePosition.y - 30;
-        let direction: 'up' | 'down' = 'up';
-
-        if (nodePosition.y - popupHeight - 30 < toolbarHeight) {
-          popupY = nodePosition.y + 50;
-          direction = 'down';
-        }
-
-        setPopupPosition({ x: popupX, y: popupY + 48, direction }); // +48 for toolbar offset
-      }
-
-      setSelectedNode(networkNode);
-      setSelectedLink(null);
-      if (onNodeClickRef.current) {
-        onNodeClickRef.current(networkNode);
-      }
-    });
-
-    // 엣지 클릭 이벤트
-    cy.on('tap', 'edge', (event) => {
-      const edge = event.target;
-      const edgeData = edge.data();
-      const networkLink: NetworkLink = {
-        id: edgeData.id,
-        source: edgeData.source,
-        target: edgeData.target,
-        bandwidth: edgeData.bandwidth,
-        utilization: edgeData.utilization,
-        status: edgeData.status,
-        type: edgeData.type,
-        latency: edgeData.latency,
-        packetLoss: edgeData.packetLoss,
-      };
-
-      // 엣지 중간 위치 계산
-      if (containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const sourcePos = cy.$(`#${edgeData.source}`).renderedPosition();
-        const targetPos = cy.$(`#${edgeData.target}`).renderedPosition();
-        const midX = (sourcePos.x + targetPos.x) / 2;
-        const midY = (sourcePos.y + targetPos.y) / 2;
-
-        const popupWidth = 320;
-        const popupHeight = 200;
-        const padding = 20;
-        const toolbarHeight = 48;
-
-        let popupX = midX;
-        if (popupX - popupWidth / 2 < padding) {
-          popupX = popupWidth / 2 + padding;
-        } else if (popupX + popupWidth / 2 > containerRect.width - padding) {
-          popupX = containerRect.width - popupWidth / 2 - padding;
-        }
-
-        let popupY = midY - 30;
-        let direction: 'up' | 'down' = 'up';
-
-        if (midY - popupHeight - 30 < toolbarHeight) {
-          popupY = midY + 30;
-          direction = 'down';
-        }
-
-        setPopupPosition({ x: popupX, y: popupY + 48, direction });
-      }
-
-      setSelectedLink(networkLink);
-      setSelectedNode(null);
-      if (onLinkClickRef.current) {
-        onLinkClickRef.current(networkLink);
-      }
-    });
-
-    // 배경 클릭 시 선택 해제
-    cy.on('tap', (event) => {
-      if (event.target === cy) {
-        setSelectedNode(null);
-        setSelectedLink(null);
-        setPopupPosition(null);
-      }
-    });
-
-    // 드래그/줌 시 팝업 닫기
-    cy.on('drag', () => {
-      setSelectedNode(null);
-      setSelectedLink(null);
-      setPopupPosition(null);
-    });
-
-    cy.on('zoom', () => {
-      setSelectedNode(null);
-      setSelectedLink(null);
-      setPopupPosition(null);
-    });
-
-    cy.on('pan', () => {
-      setSelectedNode(null);
-      setSelectedLink(null);
-      setPopupPosition(null);
-    });
-  }, []);
-
-  // 컴포넌트 언마운트 시 타이머 정리
-  useEffect(() => {
-    return () => {
-      if (layoutDebounceRef.current) {
-        clearTimeout(layoutDebounceRef.current);
-        layoutDebounceRef.current = null;
-      }
-      layoutRunningRef.current = false;
-    };
-  }, []);
-
-  // 초기 레이아웃 적용
-  useEffect(() => {
-    if (cyRef.current && data && data.nodes.length > 0) {
-      // 초기 레이아웃은 디바운스 없이 바로 실행
-      const timer = setTimeout(() => {
-        const cy = cyRef.current;
-        if (!cy || cy.nodes().length === 0) return;
-
-        try {
-          const layoutInstance = cy.layout({
-            name: 'breadthfirst',
-            fit: true,
-            padding: 50,
-            animate: false, // 초기 로드 시 애니메이션 없음
-            directed: true,
-            spacingFactor: 1.75,
-            avoidOverlap: true,
-          });
-          layoutInstance.run();
-        } catch (error) {
-          console.error('Initial layout error:', error);
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [data]); // data가 변경될 때만 초기 레이아웃 적용
-
   // 다크 모드 감지
   useEffect(() => {
     const checkDarkMode = () => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     };
 
-    // 초기 체크
     checkDarkMode();
 
-    // MutationObserver로 클래스 변경 감지
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
@@ -882,14 +646,6 @@ export function NetworkTopology({
 
     return () => clearInterval(interval);
   }, [viewOptions.autoRefresh, viewOptions.refreshInterval]);
-
-  const elements = transformData();
-
-  // Cytoscape 스타일시트 메모이제이션
-  const cytoscapeStylesheet = React.useMemo(
-    () => createCytoscapeStylesheet(viewOptions.viewMode, isDarkMode),
-    [viewOptions.viewMode, isDarkMode]
-  );
 
   // 상태별 라벨 가져오기
   const getStatusLabel = (status: string): { label: string; color: string } => {
@@ -934,7 +690,7 @@ export function NetworkTopology({
                   ? 'bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
                   : 'text-gray-500 dark:text-gray-400'
               )}
-              leftIcon={<Network className="w-4 h-4" />}
+              leftIcon={<NetworkIcon className="w-4 h-4" />}
             >
               논리적 분리
             </Button>
@@ -942,7 +698,7 @@ export function NetworkTopology({
 
           {/* 오른쪽: 자동 새로고침 및 상태 정보 */}
           <div className="flex items-center gap-6 text-sm">
-            {/* 자동 새로고침 체크박스 및 간격 설정 */}
+            {/* 자동 새로고침 */}
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -1035,9 +791,9 @@ export function NetworkTopology({
             {layoutOptions.map(layout => (
               <Button
                 key={layout.name}
-                variant={selectedLayout.name === layout.name ? 'primary' : 'ghost'}
+                variant={selectedLayout === layout.name ? 'primary' : 'ghost'}
                 size="sm"
-                onClick={() => changeLayout(layout)}
+                onClick={() => changeLayout(layout.name)}
                 className="justify-start"
               >
                 {layout.label}
@@ -1119,6 +875,7 @@ export function NetworkTopology({
       {/* 노드/링크 팝업 정보 */}
       {(selectedNode || selectedLink) && popupPosition && (
         <div
+          ref={popupRef}
           className={cn(
             'absolute z-30 transform -translate-x-1/2',
             popupPosition.direction === 'up' ? '-translate-y-full' : ''
@@ -1365,16 +1122,12 @@ export function NetworkTopology({
         </div>
       )}
 
-      {/* Cytoscape 컴포넌트 */}
-      <div ref={containerRef} className="pt-12 h-full">
-        <CytoscapeComponent
-          elements={elements}
-          style={{ width: '100%', height: '100%' }}
-          stylesheet={cytoscapeStylesheet}
-          cy={handleCyReady}
-          wheelSensitivity={0.1}
-        />
-      </div>
+      {/* vis.js 네트워크 컨테이너 */}
+      <div
+        ref={containerRef}
+        className="pt-12 h-full w-full"
+        style={{ minHeight: '500px' }}
+      />
     </div>
   );
 }

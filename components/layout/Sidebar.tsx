@@ -30,6 +30,8 @@ import {
   Search,
   Plus,
   Building2,
+  TestTube,
+  Workflow,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useStore from '@/store/useStore';
@@ -80,6 +82,14 @@ const navigation: NavigationItem[] = [
       { name: '부서 관리', href: '/security/departments', icon: Building2 },
       { name: '역할 관리', href: '/security/roles', icon: Shield },
       { name: '로그', href: '/security/audit', icon: FileText },
+    ],
+  },
+  {
+    name: 'TEST',
+    href: '/test/topology',
+    icon: TestTube,
+    children: [
+      { name: '토폴로지', href: '/test/topology', icon: Workflow },
     ],
   },
   {
